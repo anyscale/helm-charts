@@ -1,0 +1,162 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: patches
+  namespace: {{ .Release.Namespace }}
+data:
+  version: v1
+  patches.yaml: |-
+    {{- if .Values.workloadServiceAccountName }}
+    ########################################
+    # Service Account Support
+    ########################################
+    - kind: Pod
+      patch:
+        - op: add
+          path: /spec/serviceAccountName
+          value: {{ .Values.workloadServiceAccountName }}
+    {{- end }}
+
+    ########################################
+    # Taint tolerances
+    # NOTE: we handle these separate from affinity
+    ########################################
+    # Tolerances for ALL workloads
+    - kind: Pod
+      patch:
+        {{- range $k, $v := .Values.workloadDefaultTolerances.all }}
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: {{ $k }}
+            operator: {{ if $v.value }}Equal{{- else }}Exists{{- end }}
+            {{- if $v.value }}
+            value: {{ $v.value }}
+            {{- end }}
+            effect: {{ $v.effect | default "NoSchedule" }}
+        {{- end }}
+
+    # Tolerances for SPOT workloads
+    - kind: Pod
+      selector: "anyscale.com/market-type in (SPOT)"
+      patch:
+        {{- range $k, $v := .Values.workloadDefaultTolerances.spot }}
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: {{ $k }}
+            operator: {{ if $v.value }}Equal{{- else }}Exists{{- end }}
+            {{- if $v.value }}
+            value: {{ $v.value }}
+            {{- end }}
+            effect: {{ $v.effect | default "NoSchedule" }}
+        {{- end }}
+
+    # Tolerances for GPU workloads
+    - kind: Pod
+      selector: "anyscale.com/accelerator-type"
+      patch:
+        {{- range $k, $v := .Values.workloadDefaultTolerances.gpu }}
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: {{ $k }}
+            operator: {{ if $v.value }}Equal{{- else }}Exists{{- end }}
+            {{- if $v.value }}
+            value: {{ $v.value }}
+            {{- end }}
+            effect: {{ $v.effect | default "NoSchedule" }}
+        {{- end }}
+
+    ########################################
+    # Market Type Support
+    ########################################
+    {{- if eq .Values.cloudProvider "aws" }}
+    - kind: Pod
+      selector: "anyscale.com/market-type in (ON_DEMAND)"
+      patch:
+        - op: add
+          path: /spec/nodeSelector/eks.amazonaws.com~1capacityType
+          value: "ON_DEMAND"
+        - op: add
+          path: /metadata/annotations/cluster-autoscaler.kubernetes.io~1safe-to-evict
+          value: "false"
+    - kind: Pod
+      selector: "anyscale.com/market-type in (SPOT)"
+      patch:
+        - op: add
+          path: /spec/nodeSelector/eks.amazonaws.com~1capacityType
+          value: "SPOT"
+    {{- else if eq .Values.cloudProvider "gcp" }}
+    - kind: Pod
+      selector: "anyscale.com/market-type in (SPOT)"
+      patch:
+        - op: add
+          path: /spec/nodeSelector/cloud.google.com~1gke-spot
+          value: "true"
+    {{- end }}
+
+    {{- if .Values.enableZoneNodeSelector }}
+    ########################################
+    # Zone Support
+    ########################################
+    - kind: Pod
+      selector: anyscale.com/zone
+      patch:
+        - op: add
+          path: /spec/nodeSelector/topology.kubernetes.io~1zone
+        - op: copy
+          from: /metadata/annotations/anyscale.com~1zone
+          path: /spec/nodeSelector/topology.kubernetes.io~1zone
+    {{- end }}
+
+    ########################################
+    # GPU Support
+    ########################################
+    {{- if eq .Values.cloudProvider "aws" }}
+    # Prevent CPU workloads from being scheduled on GPU nodes.
+    - kind: Pod
+      selector: "!anyscale.com/accelerator-type"
+      patch:
+        - op: add
+          path: /spec/affinity
+          value:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                    - key: "nvidia.com/gpu.count"
+                      operator: DoesNotExist
+    {{- range $key, $value := .Values.supportedAccelerators.aws }}
+    - kind: Pod
+      selector: "anyscale.com/accelerator-type in ({{ $key }})"
+      patch:
+        - op: add
+          {{- if $.Values.acceleratorNodeSelector }}
+          path: /spec/nodeSelector/{{ $.Values.acceleratorNodeSelector }}
+          {{- else }}
+          path: /spec/nodeSelector/nvidia.com~1gpu.product
+          {{- end }}
+          value: "{{ $value }}"
+    {{- end }}
+    {{- else if eq .Values.cloudProvider "gcp" }}
+    {{- range $key, $value := .Values.supportedAccelerators.gcp }}
+    - kind: Pod
+      selector: "anyscale.com/accelerator-type in ({{ $key }})"
+      patch:
+        - op: add
+          {{- if $.Values.acceleratorNodeSelector }}
+          path: /spec/nodeSelector/{{ $.Values.acceleratorNodeSelector }}
+          {{- else }}
+          path: /spec/nodeSelector/cloud.google.com~1gke-accelerator
+          {{- end }}
+          value: "{{ $value }}"
+    {{- end }}
+    {{- end }}
+
+    ########################################
+    # Additional Patches
+    ########################################
+    {{- if .Values.additionalPatches}}
+{{ toYaml .Values.additionalPatches | indent 4 }}
+    {{ end -}}

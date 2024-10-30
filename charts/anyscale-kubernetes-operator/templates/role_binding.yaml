@@ -1,0 +1,13 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: anyscale-operator
+  namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: anyscale-operator
+subjects:
+- kind: ServiceAccount
+  name: anyscale-operator
+  namespace: {{ .Release.Namespace }}

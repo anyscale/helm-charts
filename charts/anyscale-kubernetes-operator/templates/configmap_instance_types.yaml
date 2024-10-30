@@ -1,0 +1,18 @@
+{{if or .Values.defaultInstanceTypes .Values.additionalInstanceTypes}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: instance-types
+  namespace: {{ .Release.Namespace }}
+  labels:
+    anyscale.com/name: instance-types
+data:
+  version: v1
+  instance_types.yaml: |-
+    {{- if .Values.defaultInstanceTypes }}
+{{ toYaml .Values.defaultInstanceTypes | indent 4 }}
+    {{- end }}
+    {{- if .Values.additionalInstanceTypes }}
+{{ toYaml .Values.additionalInstanceTypes | indent 4 }}
+    {{- end }}
+{{- end }}

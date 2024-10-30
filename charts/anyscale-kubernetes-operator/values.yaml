@@ -1,0 +1,114 @@
+# cloudDeploymentId specifies the cloud deployment ID of the AOP.
+cloudDeploymentId: ""
+
+# cloudProvider specifies the cloud provider that the AOP is running on.
+# Supported values are "aws" and "gcp".
+cloudProvider: ""
+
+# An Anyscale CLI Token. If set, the Anyscale Operator will use this token to authenticate with the Anyscale control plane.
+# If not set, the Anyscale Operator will attempt to bootstrap using a native cloud provider identity (only supported on AWS/GCP).
+anyscaleCliToken: ""
+
+# region specifies the region that the Kubernetes cluster is running in.
+region: ""
+
+# operatorImage specifies the Docker image to use for the Anyscale Operator.
+operatorImage: ""
+
+# operatorIamIdentity specifies the IAM identity from the cloud provider to bind to the Anyscale Operator.
+# This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the
+# service account. If not set, the Anyscale Operator will use the IAM identity of the Kubernetes node.
+operatorIamIdentity: ""
+
+# operatorResources specifies the resource limits and requests for Anyscale Operator deployment.
+operatorResources:
+  # 'operator' is the container for the Anyscale Operator.
+  operator:
+    requests:
+      memory: 512Mi
+      cpu: 1
+    limits:
+      memory: 2Gi
+  # 'vector' is a sidecar used to forward telemetry (operator logs/metrics) to the Anyscale Control Plane.
+  vector:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 512Mi
+
+# defaultInstanceTypes provides a list of default Pod shapes that can be
+# used in Anyscale workloads (abstracted as virtual "instance types").
+defaultInstanceTypes:
+  2CPU-8GB:
+    resources:
+      CPU: 2
+      memory: 8Gi
+  4CPU-16GB:
+    resources:
+      CPU: 4
+      memory: 16Gi
+  8CPU-32GB:
+    resources:
+      CPU: 8
+      memory: 32Gi
+  8CPU-32GB-1xT4:
+    resources:
+      CPU: 8
+      GPU: 1
+      memory: 32Gi
+      'accelerator_type:T4': 1
+
+# additionalInstanceTypes provides a list of additional Pod shapes that can be
+# used in Anyscale workloads.
+additionalInstanceTypes: {}
+
+# additionalPatches provides a list of additional patches that will be respected
+# by the operator when creating Pods & other types of Kubernetes resources.
+additionalPatches: []
+
+# supported_accelerators provides a mapping of Ray-supported accelerator types
+# to accelerator names that can be used in a GPU nodeSelector for scheduling.
+supportedAccelerators:
+  aws:
+    T4: "Tesla-T4"
+    A10G: "NVIDIA-A10G"
+  gcp:
+    L4: "nvidia-l4"
+
+# If set to true, then the "topology.kubernetes.io/zone" nodeSelector will be applied
+# to all Anyscale workloads with a request to run in a specific zone specified through
+# the compute configuration.
+#
+# This is disabled by default, since many cluster autoscalers do not respect the zone
+# node selector when autoscaling (e.g. they do not pick the right subnet to launch an
+# instance inside of).
+enableZoneNodeSelector: false
+
+# acceleratorNodeSelector provides the nodeSelector key to use when scheduling
+# Pods with accelerators. If not set, the default key for the cloud provider
+# will be used.
+acceleratorNodeSelector: ""
+
+# If set, this service account will be assigned to Pods running Anyscale workloads.
+workloadServiceAccountName: ""
+
+# Default tolerances - these match the Anyscale recommended NodeGroup configurations,
+# including those provided by the Anyscale Cloud Foundations Terraform Modules
+workloadDefaultTolerances:
+  all:
+    # This may optionally be added to Anyscale workload nodes
+    # Allows scheduling on Anyscale's partition of nodes
+    node.anyscale.com/capacity-type:
+      value: "ON_DEMAND"
+      effect: "NoSchedule"
+  gpu:
+    # GPU workloads can tolerate GPU tainted nodes
+    node.anyscale.com/accelerator-type:
+      value: "GPU"
+      effect: "NoSchedule"
+  spot:
+    # Spot workloads can tolerate SPOT tainted nodes
+    node.anyscale.com/capacity-type:
+      value: "SPOT"
+      effect: "NoSchedule"

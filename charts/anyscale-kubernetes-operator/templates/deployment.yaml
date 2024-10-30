@@ -1,0 +1,105 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: anyscale-operator
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: anyscale-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: anyscale-operator
+  template:
+    metadata:
+      labels:
+        app: anyscale-operator
+    spec:
+      serviceAccount: anyscale-operator
+      containers:
+      - name: operator
+        image: "{{ required "operatorImage is required" .Values.operatorImage }}"
+        imagePullPolicy: {{or .Values.operatorImagePullPolicy "IfNotPresent"}}
+        command: ["/app/go/infra/kubernetes_manager/kubernetes_manager"]
+        args:
+        - --log-level=info
+        - --log-file=/tmp/anyscale/logs/operator.log
+        - start
+        - --cloud-deployment-id={{ required "cloudDeploymentId is required" .Values.cloudDeploymentId }}
+        - --control-plane-url={{or .Values.controlPlaneURL "https://console.anyscale.com"}}
+        - --cloud-provider={{ .Values.cloudProvider }}
+        {{ if not .Values.anyscaleCliToken }}
+        - --region={{ required "region is required for operator registration if anyscaleCliToken is not provided & cloud-native bootstrap scheme is used; must be set to the cloud provider region of this Kubernetes cluster" .Values.region }}
+        {{ end }}
+        - --patch-config-path=/tmp/config/patches.yaml
+        - --system-logs-ingress-proxy-port=3100
+        - --system-metrics-ingress-proxy-port=3101
+        - --vector-enrichment-table-path=/tmp/config/vector/runtime_metadata.csv
+        resources:
+{{ toYaml .Values.operatorResources.operator | indent 10 }}
+        env:
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+{{if .Values.anyscaleCliToken}}
+        - name: ANYSCALE_CLI_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: anyscale-cli-token
+              key: ANYSCALE_CLI_TOKEN
+{{end}}
+        volumeMounts:
+          - name: logs
+            mountPath: /tmp/anyscale/logs/
+          - name: patches
+            mountPath: /tmp/config
+          - name: vector-config
+            mountPath: /tmp/config/vector/
+      - name: vector
+        image: timberio/vector:0.40.0-debian
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/sh"]
+        args:
+        - /etc/vector/entrypoint.sh
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        resources:
+{{ toYaml .Values.operatorResources.vector | indent 10 }}
+        volumeMounts:
+        - mountPath: /tmp/anyscale/logs/
+          name: logs
+        - mountPath: /etc/vector/
+          name: vector
+          readOnly: true
+        - mountPath: /tmp/vector
+          name: vector-state
+        - mountPath: /tmp/config/vector/
+          name: vector-config
+      volumes:
+        - name: logs
+          emptyDir: {}
+        - name: patches
+          configMap:
+            name: patches
+        - name: vector
+          projected:
+            defaultMode: 420
+            sources:
+            - configMap:
+                name: vector
+        - name: vector-state
+          emptyDir: {}
+        - name: vector-config
+          emptyDir: {}

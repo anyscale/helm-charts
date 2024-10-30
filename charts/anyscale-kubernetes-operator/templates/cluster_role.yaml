@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # Since this is a global resource, we append the namespace to it to support
+  # launching multiple cloud deployments into a single Kubernetes cluster (we
+  # assume that clouds to not share namespaces).
+  name: anyscale-operator-token-reviewer-{{ .Release.Namespace }}
+rules:
+  - apiGroups: ["authentication.k8s.io"]
+    resources: ["tokenreviews"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["events", "nodes"]
+    verbs: ["get", "watch", "list"]
