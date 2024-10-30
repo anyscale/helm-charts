@@ -8,4 +8,12 @@ entries:
     urls:
     - https://github.com/anyscale/helm-charts/releases/download/anyscale-kubernetes-operator-0.1.0/anyscale-kubernetes-operator-0.1.0.tgz
     version: 0.1.0
-generated: "2024-10-30T22:24:10.715772184Z"
+  anyscale-operator:
+  - apiVersion: v2
+    created: "2024-10-30T23:51:38.912286724Z"
+    digest: ae12f2e555bcbaaaa32a2494d99cbf501d4ddff4fd9005f7479d3c957e8c1c2d
+    name: anyscale-operator
+    urls:
+    - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-0.1.0/anyscale-operator-0.1.0.tgz
+    version: 0.1.0
+generated: "2024-10-30T23:51:38.912330085Z"
