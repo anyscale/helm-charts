@@ -8,4 +8,11 @@ entries:
     urls:
     - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-0.1.0/anyscale-operator-0.1.0.tgz
     version: 0.1.0
-generated: "2024-10-30T23:51:38.912330085Z"
+  - apiVersion: v2
+    created: "2024-11-02T00:01:32.861951697Z"
+    digest: 059aee05e4bfbd4843079d871a0726484fdbbf4bde8743a7add1206b4092b412
+    name: anyscale-operator
+    urls:
+    - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-0.0.2/anyscale-operator-0.0.2.tgz
+    version: 0.0.2
+generated: "2024-11-02T00:01:32.861960423Z"
