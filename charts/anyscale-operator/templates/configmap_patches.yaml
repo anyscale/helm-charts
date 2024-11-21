@@ -155,6 +155,26 @@ data:
     {{- end }}
 
     ########################################
+    # Instance Type Configurations (put these below the other patches so
+    # that instance-type specific patches can override the default patches).
+    ########################################
+    {{- $defaultInstanceTypesCopy := deepCopy (default dict .Values.defaultInstanceTypes) }}
+    {{- $additionalInstanceTypesCopy := deepCopy (default dict .Values.additionalInstanceTypes) }}
+    {{- $instanceTypes := merge $defaultInstanceTypesCopy $additionalInstanceTypesCopy }}
+    {{- range $instanceType, $config := $instanceTypes }}
+      {{- if $config.nodeSelector }}
+    - kind: Pod
+      selector: "anyscale.com/instance-type in ({{ $instanceType }})"
+      patch:
+        {{- range $key, $value := $config.nodeSelector }}
+        - op: add
+          path: /spec/nodeSelector/{{ $key | replace "/" "~1" }}
+          value: "{{ $value }}"
+        {{- end }}
+      {{- end }}
+    {{- end }}
+
+    ########################################
     # Additional Patches
     ########################################
     {{- if .Values.additionalPatches}}

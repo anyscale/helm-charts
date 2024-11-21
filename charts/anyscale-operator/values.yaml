@@ -39,6 +39,9 @@ operatorResources:
 
 # defaultInstanceTypes provides a list of default Pod shapes that can be
 # used in Anyscale workloads (abstracted as virtual "instance types").
+#
+# Node selectors that apply specifically to these instance types can be
+# placed directly under each instance type under the `nodeSelector` key.
 defaultInstanceTypes:
   2CPU-8GB:
     resources:
