@@ -6,7 +6,7 @@ metadata:
   labels:
     app: anyscale-operator
 spec:
-  replicas: 1
+  replicas: {{ .Values.operatorReplicas }}
   selector:
     matchLabels:
       app: anyscale-operator
@@ -35,6 +35,11 @@ spec:
         - --system-logs-ingress-proxy-port=3100
         - --system-metrics-ingress-proxy-port=3101
         - --vector-enrichment-table-path=/tmp/config/vector/runtime_metadata.csv
+        {{- if gt (int .Values.operatorReplicas) 1 }}
+        - --enable-leader-election=true
+        - --leader-election-lease-namespace={{ .Release.Namespace }}
+        - --leader-election-lease-name="anyscale-operator-lease"
+        {{- end }}
         resources:
 {{ toYaml .Values.operatorResources.operator | indent 10 }}
         env:

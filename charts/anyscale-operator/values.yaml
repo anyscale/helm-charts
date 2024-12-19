@@ -13,7 +13,7 @@ anyscaleCliToken: ""
 region: ""
 
 # operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-d54aebdebfa24d54a36fe87ba9bd055924a7a0f2"
+operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-af10d5eb875fca7a4c06c319e7a4ab01c8ecf325"
 
 # operatorIamIdentity specifies the IAM identity from the cloud provider to bind to the Anyscale Operator.
 # This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the
@@ -36,6 +36,8 @@ operatorResources:
       memory: 512Mi
     limits:
       memory: 512Mi
+
+operatorReplicas: 1
 
 # defaultInstanceTypes provides a list of default Pod shapes that can be
 # used in Anyscale workloads (abstracted as virtual "instance types").
@@ -61,6 +63,35 @@ defaultInstanceTypes:
       GPU: 1
       memory: 32Gi
       'accelerator_type:T4': 1
+  # Uncomment the following values if you are on GKE & want to use TPU node groups.
+  # These are examples; many other TPU configurations & topologies are supported.
+  #
+  # 8CPU-16GB-TPU-V5E-2x2-SINGLEHOST:
+  #   resources:
+  #     CPU: 8
+  #     TPU: 4
+  #     memory: 16Gi
+  #     'accelerator_type:TPU-V5E': 1
+  #     # Hint to Anyscale that this is a single-host deployment.
+  #     'anyscale/tpu_hosts': 1
+  #   nodeSelector:
+  #     cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
+  #     cloud.google.com/gke-tpu-topology: 2x2
+  #     cloud.google.com/gke-spot: "true"
+  # 8CPU-16GB-TPU-V5E-4x4-MULTIHOST:
+  #   resources:
+  #     CPU: 8
+  #     TPU: 4
+  #     memory: 16Gi
+  #     'accelerator_type:TPU-V5E': 1
+  #     # Hint to Anyscale that this is a multi-host deployment,
+  #     # and so we need to set the TPU_WORKER_HOSTNAMES envvar
+  #     # to link together all of the hosts in this TPU slice.
+  #     'anyscale/tpu_hosts': 4
+  #   nodeSelector:
+  #     cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
+  #     cloud.google.com/gke-tpu-topology: 4x4
+  #     cloud.google.com/gke-spot: "true"
 
 # additionalInstanceTypes provides a list of additional Pod shapes that can be
 # used in Anyscale workloads.
@@ -122,3 +153,14 @@ workloadDefaultTolerances:
     node.anyscale.com/capacity-type:
       value: "SPOT"
       effect: "NoSchedule"
+
+# If set, this will be the address that Anyscale uses for DNS resolution
+# for humans (e.g. Anyscale platform users viewing the Ray Dashboard via
+# the Anyscale UI) to reach the ingress of this Kubernetes cluster. By
+# default, Anyscale will read the address from the status field of the
+# Ingress resource created, but in certain cases, that may not be desired.
+#
+# This is also used for resolving DNS for Anyscale Services.
+#
+# This can be either an IP address or a hostname.
+ingressAddress: ""
