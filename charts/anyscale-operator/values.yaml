@@ -45,9 +45,9 @@ operatorReplicas: 1
 # Node selectors that apply specifically to these instance types can be
 # placed directly under each instance type under the `nodeSelector` key.
 defaultInstanceTypes:
-  2CPU-8GB:
+  4CPU-8GB:
     resources:
-      CPU: 2
+      CPU: 4
       memory: 8Gi
   4CPU-16GB:
     resources:
