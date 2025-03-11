@@ -1,0 +1,13 @@
+{{- if .Values.enableAnyscaleRayHeadNodePDB }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: anyscale-ray-head-nodes
+  namespace: {{ .Release.Namespace }}
+spec:
+  maxUnavailable: 0  # No head node can ever be evicted
+  unhealthyPodEvictionPolicy: AlwaysAllow  # Allows eviction of unhealthy head pods
+  selector:
+    matchLabels:
+      ray-node-type: head
+{{- end }}

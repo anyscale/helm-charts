@@ -13,7 +13,7 @@ anyscaleCliToken: ""
 region: ""
 
 # operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-af10d5eb875fca7a4c06c319e7a4ab01c8ecf325"
+operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-cd1e11a0eae946ead3bc57949c480bb82ef5a9b1"
 
 # operatorIamIdentity specifies the IAM identity from the cloud provider to bind to the Anyscale Operator.
 # This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the
@@ -38,6 +38,15 @@ operatorResources:
       memory: 512Mi
 
 operatorReplicas: 1
+
+# operatorExcludeComponentVerification allows specifying components to skip verification for during the
+# operator startup sequence.
+#
+# Valid values are:
+#  - STORAGE_BUCKET
+#
+# By default, all components will be verified during the operator startup sequence.
+operatorExcludeComponentVerification: []
 
 # defaultInstanceTypes provides a list of default Pod shapes that can be
 # used in Anyscale workloads (abstracted as virtual "instance types").
@@ -164,3 +173,12 @@ workloadDefaultTolerances:
 #
 # This can be either an IP address or a hostname.
 ingressAddress: ""
+
+
+# If set to true, this will create a PodDisruptionBudget to avoid
+# head node evictions.
+# This could block the k8s cluster upgrade or maintenance.
+# If enabled, remember to delete the PDB before upgrading the cluster.
+enableAnyscaleRayHeadNodePDB: false
+
+enableKarpenterSupport: false

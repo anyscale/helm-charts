@@ -38,7 +38,12 @@ spec:
         {{- if gt (int .Values.operatorReplicas) 1 }}
         - --enable-leader-election=true
         - --leader-election-lease-namespace={{ .Release.Namespace }}
-        - --leader-election-lease-name="anyscale-operator-lease"
+        - --leader-election-lease-name=anyscale-operator-lease
+        {{- end }}
+        {{- if .Values.operatorExcludeComponentVerification }}
+        {{- range .Values.operatorExcludeComponentVerification }}
+        - --exclude-component-verification={{ . }}
+        {{- end }}
         {{- end }}
         resources:
 {{ toYaml .Values.operatorResources.operator | indent 10 }}
