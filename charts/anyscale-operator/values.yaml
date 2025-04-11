@@ -182,3 +182,7 @@ ingressAddress: ""
 enableAnyscaleRayHeadNodePDB: false
 
 enableKarpenterSupport: false
+
+# "The path to the kubeconfig file to use for the Kubernetes client. 
+# If not provided, in-cluster configuration will be used."
+kubeConfig: ""
