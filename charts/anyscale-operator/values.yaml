@@ -183,6 +183,74 @@ enableAnyscaleRayHeadNodePDB: false
 
 enableKarpenterSupport: false
 
-# "The path to the kubeconfig file to use for the Kubernetes client. 
-# If not provided, in-cluster configuration will be used."
+# string, kube-config
+# The path to the kubeconfig file to use for the Kubernetes client. 
+# If not provided, in-cluster configuration will be used.
 kubeConfig: ""
+
+# duration, sync-interval, default: 1s
+# The interval at which the manager should reconcile local state with Anyscale state.
+syncInterval: 
+
+# duration, sync-timeout
+# The timeout after which we should give up on a sync RPC.
+syncTimeout: 
+
+# duration, completed-report-ttl
+# The time to live for completed operations reports in memory before cleanup.
+completedReportTTL: 
+
+# string, control-plane-url
+# The URL of the Anyscale Control Plane.
+controlPlaneUrl: ""
+
+# int, metrics-server-port, default: 2112
+# The port number of the metrics server.
+metricsServerPort: 2112
+
+# duration, unscheduled-pod-reaper-reconcile-interval, default: 1m
+# The interval at which the unscheduled pod reaper should reconcile.
+unscheduledPodReaperReconcileInterval: 
+
+# duration, unscheduled-pod-reaper-termination-threshold, default: 10m
+# The threshold after which an unscheduled Pod should be considered leaked + terminated.
+unscheduledPodReaperTerminationThreshold: 
+
+# string, control-plane-proxy-socket-path, default: /tmp/anyscale/sockets/control_plane.sock
+# The path to the control plane proxy socket.
+controlPlaneProxySocketPath: "/tmp/anyscale/sockets/control_plane.sock"
+
+# int, system-logs-ingress-proxy-port, default: 3100
+# The port number of the system logs ingress proxy.
+systemLogsIngressProxyPort: 3100
+
+# int, system-metrics-ingress-proxy-port, default: 3101
+# The port number of the system metrics ingress proxy.
+systemMetricsIngressProxyPort: 3101
+
+# string, vector-enrichment-table-path
+# The path to the vector enrichment table (used to enhance telemetry).
+vectorEnrichmentTablePath: ""
+
+# float32, kubernetes-client-rate-limiter-qps, default: 1000
+# The QPS rate limit for the Kubernetes client. Recommended to set to large values (e.g. 1000) to support large workloads.
+kubernetesClientRateLimiterQPS: 1000
+
+# int, kubernetes-client-rate-limiter-burst, default: 2000
+# The burst rate limit for the Kubernetes client. Recommended to set to large values (e.g. 2000) to support large workloads.
+kubernetesClientRateLimiterBurst: 2000
+
+# string, leader-election-lease-namespace
+# The namespace of the leader election lease.
+leaderElectionLeaseNamespace: ""
+
+# string, leader-election-lease-name
+# The name of the leader election lease.
+leaderElectionLeaseName: ""
+
+# bool, enable-leader-election, default: false
+# Whether leader election is enabled.
+enableLeaderElection: false
+
+
+
