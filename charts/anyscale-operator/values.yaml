@@ -13,7 +13,7 @@ anyscaleCliToken: ""
 region: ""
 
 # operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-cd1e11a0eae946ead3bc57949c480bb82ef5a9b1"
+operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-08a6e443535e5ba9f2c98a568d675293375ddfc3"
 
 # operatorIamIdentity specifies the IAM identity from the cloud provider to bind to the Anyscale Operator.
 # This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the
@@ -47,6 +47,15 @@ operatorReplicas: 1
 #
 # By default, all components will be verified during the operator startup sequence.
 operatorExcludeComponentVerification: []
+
+# operatorNodeSelection allows configuring where the Anyscale Operator pods are scheduled.
+# Either nodeSelector or affinity can be specified
+# If both are specified, nodeSelector takes precedence.
+operatorNodeSelection:
+  # nodeSelector is a map of key-value pairs used for basic node selection
+  nodeSelector: {}
+  # affinity allows for more complex node selection rules
+  affinity: {}
 
 # defaultInstanceTypes provides a list of default Pod shapes that can be
 # used in Anyscale workloads (abstracted as virtual "instance types").
@@ -116,6 +125,11 @@ supportedAccelerators:
   aws:
     T4: "Tesla-T4"
     A10G: "NVIDIA-A10G"
+  azure:
+    T4: "NVIDIA-T4"
+    A10: "NVIDIA-A10"
+    A100: "NVIDIA-A100"
+    H100: "NVIDIA-H100"
   gcp:
     V100: "nvidia-tesla-v100"
     P100: "nvidia-tesla-p100"

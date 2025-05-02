@@ -4,6 +4,11 @@ kind: PodDisruptionBudget
 metadata:
   name: anyscale-ray-head-nodes
   namespace: {{ .Release.Namespace }}
+labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   maxUnavailable: 0  # No head node can ever be evicted
   unhealthyPodEvictionPolicy: AlwaysAllow  # Allows eviction of unhealthy head pods

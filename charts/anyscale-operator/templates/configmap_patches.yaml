@@ -3,6 +3,11 @@ kind: ConfigMap
 metadata:
   name: patches
   namespace: {{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 data:
   version: v1
   patches.yaml: |-
@@ -14,7 +19,19 @@ data:
       patch:
         - op: add
           path: /spec/serviceAccountName
-          value: {{ .Values.workloadServiceAccountName }}
+          value: "{{ .Values.workloadServiceAccountName }}"
+    {{- end }}
+
+    # Enable workload identity for azure
+    {{- if eq .Values.cloudProvider "azure" }}
+    - kind: Pod
+      patch:
+        - op: add
+          path: /metadata/labels/azure.workload.identity~1use
+          value: "true"
+        - op: add
+          path: /metadata/annotations/azure.workload.identity~1inject-proxy-sidecar
+          value: "true"
     {{- end }}
 
     ########################################
@@ -150,6 +167,15 @@ data:
           {{- else }}
           path: /spec/nodeSelector/cloud.google.com~1gke-accelerator
           {{- end }}
+          value: "{{ $value }}"
+    {{- end }}
+    {{- else if eq .Values.cloudProvider "azure" }}
+    {{- range $key, $value := .Values.supportedAccelerators.azure }}
+    - kind: Pod
+      selector: "anyscale.com/accelerator-type in ({{ $key }})"
+      patch:
+        - op: add
+          path: /spec/nodeSelector/nvidia.com~1gpu.product
           value: "{{ $value }}"
     {{- end }}
     {{- end }}

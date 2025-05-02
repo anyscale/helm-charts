@@ -5,6 +5,11 @@ metadata:
   # launching multiple cloud deployments into a single Kubernetes cluster (we
   # assume that clouds to not share namespaces).
   name: anyscale-operator-token-reviewer-{{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

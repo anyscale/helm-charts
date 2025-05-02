@@ -5,6 +5,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
   labels:
     app: anyscale-operator
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.operatorReplicas }}
   selector:
@@ -14,19 +18,33 @@ spec:
     metadata:
       labels:
         app: anyscale-operator
+        {{- if eq .Values.cloudProvider "azure" }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+      {{- if eq .Values.cloudProvider "azure" }}
+      annotations:
+        azure.workload.identity/inject-proxy-sidecar: "true"
+      {{- end }}
     spec:
       serviceAccount: anyscale-operator
+      {{- if .Values.operatorNodeSelection.nodeSelector }}
+      nodeSelector:
+{{ toYaml .Values.operatorNodeSelection.nodeSelector | indent 8 }}
+      {{- else if .Values.operatorNodeSelection.affinity }}
+      affinity:
+{{ toYaml .Values.operatorNodeSelection.affinity | indent 8 }}
+      {{- end }}
       containers:
       - name: operator
         image: "{{ required "operatorImage is required" .Values.operatorImage }}"
-        imagePullPolicy: {{or .Values.operatorImagePullPolicy "IfNotPresent"}}
+        imagePullPolicy: {{ .Values.operatorImagePullPolicy | default "IfNotPresent" }}
         command: ["/app/go/infra/kubernetes_manager/kubernetes_manager"]
         args:
         - --log-level=info
         - --log-file=/tmp/anyscale/logs/operator.log
         - start
         - --cloud-deployment-id={{ required "cloudDeploymentId is required" .Values.cloudDeploymentId }}
-        - --control-plane-url={{or .Values.controlPlaneURL "https://console.anyscale.com"}}
+        - --control-plane-url={{ .Values.controlPlaneURL | default "https://console.anyscale.com" }}
         - --cloud-provider={{ .Values.cloudProvider }}
         {{ if not .Values.anyscaleCliToken }}
         - --region={{ required "region is required for operator registration if anyscaleCliToken is not provided & cloud-native bootstrap scheme is used; must be set to the cloud provider region of this Kubernetes cluster" .Values.region }}
