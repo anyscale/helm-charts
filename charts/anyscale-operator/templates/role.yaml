@@ -15,6 +15,11 @@ rules:
 - apiGroups: ["networking.k8s.io"]
   resources: ["ingresses"]
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+{{- if .Values.enableGateway }}
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["httproutes"]
+  verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+{{- end }}
 {{- if gt (int .Values.operatorReplicas) 1 }}
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]

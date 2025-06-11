@@ -50,6 +50,12 @@ spec:
         - --region={{ required "region is required for operator registration if anyscaleCliToken is not provided & cloud-native bootstrap scheme is used; must be set to the cloud provider region of this Kubernetes cluster" .Values.region }}
         {{ end }}
         - --patch-config-path=/tmp/config/patches.yaml
+        {{- if .Values.enableGateway }}
+        - --enable-gateway=true
+        - --gateway-name={{ .Values.gatewayName }}
+        - --gateway-hostname={{ .Values.gatewayHostname }}
+        - --gateway-ip={{ .Values.gatewayIp }}
+        {{- end }}
         - --system-logs-ingress-proxy-port=3100
         - --system-metrics-ingress-proxy-port=3101
         - --vector-enrichment-table-path=/tmp/config/vector/runtime_metadata.csv

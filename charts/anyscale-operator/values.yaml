@@ -13,7 +13,7 @@ anyscaleCliToken: ""
 region: ""
 
 # operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-08a6e443535e5ba9f2c98a568d675293375ddfc3"
+operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-bbdd5c6b3eb955e144f0a15f6f5366a30d2a8012"
 
 # operatorIamIdentity specifies the IAM identity from the cloud provider to bind to the Anyscale Operator.
 # This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the
@@ -193,6 +193,24 @@ ingressAddress: ""
 # head node evictions.
 # This could block the k8s cluster upgrade or maintenance.
 # If enabled, remember to delete the PDB before upgrading the cluster.
-enableAnyscaleRayHeadNodePDB: false
+enableAnyscaleRayHeadNodePDB: true
 
 enableKarpenterSupport: false
+
+## Gateway related values.
+
+# enableGateway controls whether to enable the gateway functionality.
+# When set to true, the load balancing is done through the gateway.
+enableGateway: false
+
+# gatewayName specifies the name of the gateway to be used.
+# This is used to identify the gateway resource in the k8s cluster.
+gatewayName: ""
+
+# gatewayIp specifies the IP address of the gateway.
+# This is used for routing traffic through the gateway.
+gatewayIp: ""
+
+# gatewayHostname specifies the hostname of the gateway.
+# This is used for routing traffic through the gateway.
+gatewayHostname: ""
