@@ -48,7 +48,7 @@ data:
             key: {{ $k }}
             operator: {{ if $v.value }}Equal{{- else }}Exists{{- end }}
             {{- if $v.value }}
-            value: {{ $v.value }}
+            value: {{ quote $v.value }}
             {{- end }}
             effect: {{ $v.effect | default "NoSchedule" }}
         {{- end }}
@@ -64,7 +64,7 @@ data:
             key: {{ $k }}
             operator: {{ if $v.value }}Equal{{- else }}Exists{{- end }}
             {{- if $v.value }}
-            value: {{ $v.value }}
+            value: {{ quote $v.value }}
             {{- end }}
             effect: {{ $v.effect | default "NoSchedule" }}
         {{- end }}
@@ -80,7 +80,7 @@ data:
             key: {{ $k }}
             operator: {{ if $v.value }}Equal{{- else }}Exists{{- end }}
             {{- if $v.value }}
-            value: {{ $v.value }}
+            value: {{ quote $v.value }}
             {{- end }}
             effect: {{ $v.effect | default "NoSchedule" }}
         {{- end }}
