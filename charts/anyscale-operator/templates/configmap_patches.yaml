@@ -92,18 +92,30 @@ data:
     - kind: Pod
       selector: "anyscale.com/market-type in (ON_DEMAND)"
       patch:
+      {{- if .Values.enableKarpenterSupport }}
         - op: add
-          path: {{ ternary "/spec/nodeSelector/karpenter.sh~1capacity-type" "/spec/nodeSelector/eks.amazonaws.com~1capacityType" .Values.enableKarpenterSupport }}
+          path: "/spec/nodeSelector/karpenter.sh~1capacity-type"
+          value: "on-demand"
+      {{- else }}
+        - op: add
+          path: "/spec/nodeSelector/eks.amazonaws.com~1capacityType"
           value: "ON_DEMAND"
+     {{- end }}
         - op: add
           path: /metadata/annotations/cluster-autoscaler.kubernetes.io~1safe-to-evict
           value: "false"
     - kind: Pod
       selector: "anyscale.com/market-type in (SPOT)"
       patch:
+      {{- if .Values.enableKarpenterSupport }}
         - op: add
-          path: {{ ternary "/spec/nodeSelector/karpenter.sh~1capacity-type" "/spec/nodeSelector/eks.amazonaws.com~1capacityType" .Values.enableKarpenterSupport }}
+          path: "/spec/nodeSelector/karpenter.sh~1capacity-type"
+          value: "spot"
+      {{- else }}
+        - op: add
+          path: "/spec/nodeSelector/eks.amazonaws.com~1capacityType"
           value: "SPOT"
+      {{- end }}
     {{- else if eq .Values.cloudProvider "gcp" }}
     - kind: Pod
       selector: "anyscale.com/market-type in (SPOT)"
