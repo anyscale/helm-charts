@@ -1,0 +1,98 @@
+cloudProvider: aws
+additionalInstanceTypes:
+  g3.4xlarge:
+    resources:
+      CPU: 13
+      GPU: 1
+      accelerator_type:M60: 1
+      memory: 119Gi
+  g3.8xlarge:
+    resources:
+      CPU: 29
+      GPU: 2
+      accelerator_type:M60: 2
+      memory: 230Gi
+  g4dn.2xlarge:
+    resources:
+      CPU: 5
+      GPU: 1
+      accelerator_type:T4: 1
+      memory: 30Gi
+  g4dn.4xlarge:
+    resources:
+      CPU: 13
+      GPU: 1
+      accelerator_type:T4: 1
+      memory: 119Gi
+  g4dn.12xlarge:
+    resources:
+      CPU: 44
+      GPU: 4
+      accelerator_type:T4: 4
+      memory: 160Gi
+  g5.2xlarge:
+    resources:
+      CPU: 5
+      GPU: 1
+      accelerator_type:A10G: 1
+      memory: 20Gi
+  m5.2xlarge:
+    resources:
+      CPU: 8
+      memory: 32Gi
+  m5.4xlarge:
+    resources:
+      CPU: 16
+      memory: 64Gi
+  m5.8xlarge:
+    resources:
+      CPU: 32
+      memory: 128Gi
+  m5.16xlarge:
+    resources:
+      CPU: 64
+      memory: 220Gi
+  m5.24xlarge:
+    resources:
+      CPU: 94
+      memory: 360Gi
+  m5.large:
+    resources:
+      CPU: 2
+      memory: 8Gi
+  m5.xlarge:
+    resources:
+      CPU: 4
+      memory: 16Gi
+  never-available-for-e2e-tests-1:
+    resources:
+      CPU: 1000
+      memory: 30Gi
+  never-available-for-e2e-tests-2:
+    resources:
+      CPU: 1000
+      memory: 30Gi
+  p3.8xlarge:
+    resources:
+      CPU: 29
+      GPU: 4
+      accelerator_type:V100: 4
+      memory: 230Gi
+supportedAccelerators:
+  aws:
+    A10G: NVIDIA-A10G
+    T4: Tesla-T4
+  azure:
+    A10: NVIDIA-A10
+    A100: NVIDIA-A100
+    H100: NVIDIA-H100
+    T4: NVIDIA-T4
+  gcp:
+    A100-40G: nvidia-tesla-a100
+    A100-80G: nvidia-a100-80gb
+    H100: nvidia-h100-80gb
+    H100-MEGA: nvidia-h100-mega-80gb
+    L4: nvidia-l4
+    P100: nvidia-tesla-p100
+    T4: nvidia-tesla-t4
+    V100: nvidia-tesla-v100
