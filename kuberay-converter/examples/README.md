@@ -27,23 +27,3 @@ anyscale workspace_v2 create -f ./output/workspace-config.yaml
 anyscale job submit -f ./output/job-config.yaml
 anyscale service deploy -f ./output/service-config.yaml
 ```
-
-## Customization
-
-```yaml
-# Resource limits
-resources:
-  limits:
-    cpu: "4"
-    memory: "8Gi"
-
-# Autoscaling
-workerGroupSpecs:
-  - maxReplicas: 10
-```
-
-## Support
-
-- [Main README](../README.md)
-- KubeRay documentation
-- Anyscale documentation 
