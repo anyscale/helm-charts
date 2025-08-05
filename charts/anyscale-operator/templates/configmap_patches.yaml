@@ -15,7 +15,9 @@ data:
     ########################################
     # Service Account Support
     ########################################
+    # Apply service account patch only to pods that don't have IAM mapping
     - kind: Pod
+      selector: "!{{ .Values.iamMappingAnnotation }}"
       patch:
         - op: add
           path: /spec/serviceAccountName
@@ -123,6 +125,23 @@ data:
         - op: add
           path: /spec/nodeSelector/cloud.google.com~1gke-spot
           value: "true"
+    - kind: Pod
+      selector: "anyscale.com/market-type in (ON_DEMAND)"
+      patch:
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: cloud.google.com/gke-spot
+                operator: DoesNotExist
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: cloud.google.com/gke-spot
+                operator: NotIn
+                values:
+                  - "true"
     {{- end }}
 
     {{- if .Values.enableZoneNodeSelector }}

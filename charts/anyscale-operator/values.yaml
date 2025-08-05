@@ -13,7 +13,7 @@ anyscaleCliToken: ""
 region: ""
 
 # operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-bbdd5c6b3eb955e144f0a15f6f5366a30d2a8012"
+operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-256b7863216e9d020a1b269506609d783e6e2e24"
 
 # operatorIamIdentity specifies the IAM identity from the cloud provider to bind to the Anyscale Operator.
 # This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the
@@ -56,6 +56,8 @@ operatorNodeSelection:
   nodeSelector: {}
   # affinity allows for more complex node selection rules
   affinity: {}
+  # tolerations allow the operator pod to schedule on nodes with matching taints
+  tolerations: []
 
 # defaultInstanceTypes provides a list of default Pod shapes that can be
 # used in Anyscale workloads (abstracted as virtual "instance types").
@@ -157,6 +159,9 @@ acceleratorNodeSelector: ""
 # If set, this service account will be assigned to Pods running Anyscale workloads.
 workloadServiceAccountName: ""
 
+# IAM mapping annotation key used to identify pods that use IAM mapping
+iamMappingAnnotation: "anyscale.com/iam-mapping"
+
 # Default tolerances - these match the Anyscale recommended NodeGroup configurations,
 # including those provided by the Anyscale Cloud Foundations Terraform Modules
 workloadDefaultTolerances:
@@ -214,3 +219,33 @@ gatewayIp: ""
 # gatewayHostname specifies the hostname of the gateway.
 # This is used for routing traffic through the gateway.
 gatewayHostname: ""
+
+# gatewayAPIVersion specifies the API version of the gateway.
+# This is used to identify the gateway resource in the k8s cluster.
+# Supported values are "gateway.networking.k8s.io/v1" and "networking.istio.io/v1alpha3".
+gatewayAPIVersion: "gateway.networking.k8s.io/v1"
+
+storage:
+  s3:
+    usePathStyle: false
+
+# string, kube-config
+# The path to the kubeconfig file to use for the Kubernetes client.
+# If not provided, in-cluster configuration will be used.
+kubeConfigPath: ""
+
+# duration, unscheduled-pod-reaper-reconcile-interval, default: 1m
+# The interval at which the unscheduled pod reaper should reconcile.
+unscheduledPodReaperReconcileInterval:
+
+# duration, unscheduled-pod-reaper-termination-threshold, default: 10m
+# The threshold after which an unscheduled Pod should be considered leaked + terminated.
+unscheduledPodReaperTerminationThreshold:
+
+# float32, kubernetes-client-rate-limiter-qps, default: 1000
+# The QPS rate limit for the Kubernetes client. Recommended to set to large values (e.g. 1000) to support large workloads.
+kubernetesClientRateLimiterQPS: 1000
+
+# int, kubernetes-client-rate-limiter-burst, default: 2000
+# The burst rate limit for the Kubernetes client. Recommended to set to large values (e.g. 2000) to support large workloads.
+kubernetesClientRateLimiterBurst: 2000
