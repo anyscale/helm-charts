@@ -1,0 +1,36 @@
+apiVersion: ray.io/v1
+kind: RayCluster
+metadata:
+  name: test-cluster
+  namespace: default
+spec:
+  rayVersion: "2.7.0"
+  headGroupSpec:
+    rayStartParams:
+      dashboard-host: "0.0.0.0"
+      num-cpus: "2"
+    template:
+      spec:
+        containers:
+          - name: ray
+            image: rayproject/ray:2.7.0
+            resources:
+              limits:
+                cpu: "2"
+                memory: "4Gi"
+  workerGroupSpecs:
+    - groupName: small-group
+      replicas: 1
+      minReplicas: 1
+      maxReplicas: 100
+      rayStartParams:
+        num-cpus: "1"
+      template:
+        spec:
+          containers:
+            - name: ray
+              image: rayproject/ray:2.7.0
+              resources:
+                limits:
+                  cpu: "4"
+                  memory: "8Gi"
