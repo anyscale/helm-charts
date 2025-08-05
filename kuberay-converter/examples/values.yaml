@@ -64,14 +64,6 @@ additionalInstanceTypes:
     resources:
       CPU: 4
       memory: 16Gi
-  never-available-for-e2e-tests-1:
-    resources:
-      CPU: 1000
-      memory: 30Gi
-  never-available-for-e2e-tests-2:
-    resources:
-      CPU: 1000
-      memory: 30Gi
   p3.8xlarge:
     resources:
       CPU: 29
