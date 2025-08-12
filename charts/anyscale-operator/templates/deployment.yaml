@@ -24,6 +24,7 @@ spec:
       {{- if eq .Values.cloudProvider "azure" }}
       annotations:
         azure.workload.identity/inject-proxy-sidecar: "true"
+        azure.workload.identity/proxy-sidecar-port: {{ .Values.azureWorkloadIdentityProxyPort | default 10000 | quote }}
       {{- end }}
     spec:
       serviceAccount: anyscale-operator
@@ -34,9 +35,13 @@ spec:
       affinity:
 {{ toYaml .Values.operatorNodeSelection.affinity | indent 8 }}
       {{- end }}
+      {{- if .Values.operatorNodeSelection.tolerations }}
+      tolerations:
+{{ toYaml .Values.operatorNodeSelection.tolerations | indent 8 }}
+      {{- end }}
       containers:
       - name: operator
-        image: "{{ required "operatorImage is required" .Values.operatorImage }}"
+        image: '{{ required "operatorImage is required" .Values.operatorImage }}'
         imagePullPolicy: {{ .Values.operatorImagePullPolicy | default "IfNotPresent" }}
         command: ["/app/go/infra/kubernetes_manager/kubernetes_manager"]
         args:
@@ -44,21 +49,37 @@ spec:
         - --log-file=/tmp/anyscale/logs/operator.log
         - start
         - --cloud-deployment-id={{ required "cloudDeploymentId is required" .Values.cloudDeploymentId }}
-        - --control-plane-url={{ .Values.controlPlaneURL | default "https://console.anyscale.com" }}
+        - --control-plane-url={{ include "anyscale-operator.validateControlPlaneURL" . }}
         - --cloud-provider={{ .Values.cloudProvider }}
-        {{ if not .Values.anyscaleCliToken }}
+        {{- if .Values.unscheduledPodReaperTerminationThreshold }}
+        - --unscheduled-pod-reaper-termination-threshold={{ .Values.unscheduledPodReaperTerminationThreshold }}
+        {{- end }}
+        {{- if .Values.unscheduledPodReaperReconcileInterval }}
+        - --unscheduled-pod-reaper-reconcile-interval={{ .Values.unscheduledPodReaperReconcileInterval }}
+        {{- end }}
+        {{- if .Values.kubernetesClientRateLimiterQPS }}
+        - --kubernetes-client-rate-limiter-qps={{ .Values.kubernetesClientRateLimiterQPS }}
+        {{- end }}
+        {{- if .Values.kubernetesClientRateLimiterBurst }}
+        - --kubernetes-client-rate-limiter-burst={{ .Values.kubernetesClientRateLimiterBurst }}
+        {{- end }}
+        {{- if not .Values.anyscaleCliToken }}
         - --region={{ required "region is required for operator registration if anyscaleCliToken is not provided & cloud-native bootstrap scheme is used; must be set to the cloud provider region of this Kubernetes cluster" .Values.region }}
-        {{ end }}
+        {{- end }}
         - --patch-config-path=/tmp/config/patches.yaml
         {{- if .Values.enableGateway }}
         - --enable-gateway=true
         - --gateway-name={{ .Values.gatewayName }}
         - --gateway-hostname={{ .Values.gatewayHostname }}
         - --gateway-ip={{ .Values.gatewayIp }}
+        - --gateway-api-version={{ .Values.gatewayAPIVersion }}
         {{- end }}
         - --system-logs-ingress-proxy-port=3100
         - --system-metrics-ingress-proxy-port=3101
         - --vector-enrichment-table-path=/tmp/config/vector/runtime_metadata.csv
+        {{- if .Values.kubeConfigPath }}
+        - --kube-config={{ .Values.kubeConfigPath }}
+        {{- end }}
         {{- if gt (int .Values.operatorReplicas) 1 }}
         - --enable-leader-election=true
         - --leader-election-lease-namespace={{ .Release.Namespace }}
@@ -69,9 +90,16 @@ spec:
         - --exclude-component-verification={{ . }}
         {{- end }}
         {{- end }}
+        {{- if .Values.enableStatusReporting }}
+        - --enable-status-reporting=true
+        {{- end }}
         resources:
 {{ toYaml .Values.operatorResources.operator | indent 10 }}
         env:
+        {{ if default false .Values.storageS3UsePathStyle }}
+        - name: ANYSCALE_S3_USE_PATH_STYLE
+          value: "true"
+        {{ end }}
         - name: POD_NAMESPACE
           valueFrom:
             fieldRef:

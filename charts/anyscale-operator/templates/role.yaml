@@ -16,8 +16,13 @@ rules:
   resources: ["ingresses"]
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- if .Values.enableGateway }}
+{{- if eq .Values.gatewayAPIVersion "networking.istio.io/v1alpha3" }}
+- apiGroups: ["networking.istio.io"]
+  resources: ["virtualservices"]
+{{- else }}
 - apiGroups: ["gateway.networking.k8s.io"]
   resources: ["httproutes"]
+{{- end }}
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- end }}
 {{- if gt (int .Values.operatorReplicas) 1 }}
