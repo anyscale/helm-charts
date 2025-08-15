@@ -2,6 +2,14 @@ apiVersion: v1
 entries:
   anyscale-operator:
   - apiVersion: v2
+    created: "2025-08-15T18:28:43.572144239Z"
+    description: A Helm chart for Anyscale Operator
+    digest: 86f7014a2a258b24d81bd64866a050cbf32cffbef293941e8dd11043f56b6ebc
+    name: anyscale-operator
+    urls:
+    - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-0.6.1/anyscale-operator-0.6.1.tgz
+    version: 0.6.1
+  - apiVersion: v2
     created: "2025-08-12T23:07:35.173247328Z"
     description: A Helm chart for Anyscale Operator
     digest: 6bec89c74f2fa8c5e452939e2abfa8fd22a5507abfdf2275105d92e84acec9cb
@@ -84,4 +92,4 @@ entries:
     urls:
     - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-0.0.2/anyscale-operator-0.0.2.tgz
     version: 0.0.2
-generated: "2025-08-12T23:07:35.173292783Z"
+generated: "2025-08-15T18:28:43.572212147Z"
