@@ -17,7 +17,7 @@ data:
     ########################################
     # Apply service account patch only to pods that don't have IAM mapping
     - kind: Pod
-      selector: "!{{ .Values.iamMappingAnnotation }}"
+      selector: {{ print "!" .Values.iamMappingAnnotation | default "anyscale.com/iam-mapping" | quote }}
       patch:
         - op: add
           path: /spec/serviceAccountName
@@ -34,6 +34,9 @@ data:
         - op: add
           path: /metadata/annotations/azure.workload.identity~1inject-proxy-sidecar
           value: "true"
+        - op: add
+          path: /metadata/annotations/azure.workload.identity~1proxy-sidecar-port
+          value: "10000"
     {{- end }}
 
     ########################################
