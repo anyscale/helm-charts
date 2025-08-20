@@ -17,7 +17,7 @@ data:
     ########################################
     # Apply service account patch only to pods that don't have IAM mapping
     - kind: Pod
-      selector: {{ print "!" .Values.iamMappingAnnotation | default "anyscale.com/iam-mapping" | quote }}
+      selector: {{ print "!" (.Values.iamMappingAnnotation | default "anyscale.com/iam-mapping") | quote }}
       patch:
         - op: add
           path: /spec/serviceAccountName
