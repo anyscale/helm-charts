@@ -170,14 +170,11 @@ data:
       selector: "!anyscale.com/accelerator-type"
       patch:
         - op: add
-          path: /spec/affinity
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
           value:
-            nodeAffinity:
-              requiredDuringSchedulingIgnoredDuringExecution:
-                nodeSelectorTerms:
-                  - matchExpressions:
-                    - key: "nvidia.com/gpu.count"
-                      operator: DoesNotExist
+            matchExpressions:
+              - key: "nvidia.com/gpu.count"
+                operator: DoesNotExist
     {{- range $key, $value := .Values.supportedAccelerators.aws }}
     - kind: Pod
       selector: "anyscale.com/accelerator-type in ({{ $key }})"
