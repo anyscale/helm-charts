@@ -56,6 +56,9 @@ operatorReplicas: 1
 # By default, all components will be verified during the operator startup sequence.
 operatorExcludeComponentVerification: []
 
+# operatorImagePullSecrets allows configuring imagePullSecrets to enable pulling the operator image through a private docker proxy.
+operatorImagePullSecrets: []
+
 # operatorNodeSelection allows configuring where the Anyscale Operator pods are scheduled.
 # Either nodeSelector or affinity can be specified
 # If both are specified, nodeSelector takes precedence.

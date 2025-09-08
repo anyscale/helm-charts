@@ -39,6 +39,10 @@ spec:
       tolerations:
 {{ toYaml .Values.operatorNodeSelection.tolerations | indent 8 }}
       {{- end }}
+      {{- if .Values.operatorImagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.operatorImagePullSecrets | indent 8 }}
+      {{- end }}
       containers:
       - name: operator
         image: '{{ required "operatorImage is required" .Values.operatorImage }}'
