@@ -19,6 +19,7 @@ The following are required values for the Anyscale Operator.
 | `region` | string | `""` | Cloud region for deployment |
 | `anyscaleCliToken` | string | `""` | Anyscale CLI token for control plane authentication. Falls back to cloud provider identity if not set. This is required for Azure and Generic deployments. |
 | `operatorIamIdentity` | string | `""` | Cloud provider IAM identity (AWS role ARN , GCP service account email, Azure identity) |
+| `operatorImage` | string | `""` | Docker image to use for the Anyscale Operator. Updated with helm releases. Anyscale support may provide preview version of image for debugging. |
 
 ## Advanced Configuration
 
@@ -97,7 +98,6 @@ For advanced usage consult with Anyscale support.
 | `operatorImagePullPolicy` | string | `"IfNotPresent"` | imagePullPolicy for the Anyscale Operator. |
 | `vectorImage` | string | `"timberio/vector:0.40.0-debian"` | Docker image to use for the Vector sidecar. |
 | `vectorImagePullPolicy` | string | `"IfNotPresent"` | imagePullPolicy for the Vector sidecar. |
-
 
 ## Installation
 
