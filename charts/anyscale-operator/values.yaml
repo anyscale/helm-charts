@@ -13,7 +13,7 @@ anyscaleCliToken: ""
 region: ""
 
 # operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-1449ce2282c302f4da4378daa67c6073d78686a7"
+operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-59b02256716cb8cb6ddb281ba00dd9a12ce24a6f"
 
 # vectorImage specifies the Docker image to use for the Vector sidecar.
 vectorImage: "timberio/vector:0.40.0-debian"
@@ -73,8 +73,8 @@ operatorNodeSelection:
 # defaultInstanceTypes provides a list of default Pod shapes that can be
 # used in Anyscale workloads (abstracted as virtual "instance types").
 #
-# Node selectors that apply specifically to these instance types can be
-# placed directly under each instance type under the `nodeSelector` key.
+# Node selectors and tolerations that apply specifically to these instance types can be
+# placed directly under each instance type under the `nodeSelector` and `tolerations` keys.
 defaultInstanceTypes:
   2CPU-8GB:
     resources:
@@ -109,6 +109,10 @@ defaultInstanceTypes:
   #     cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
   #     cloud.google.com/gke-tpu-topology: 2x2
   #     cloud.google.com/gke-spot: "true"
+  #   tolerations:
+  #     - key: "custom-taint"
+  #       operator: "Exists"
+  #       effect: "NoSchedule"
   # 8CPU-16GB-TPU-V5E-4x4-MULTIHOST:
   #   resources:
   #     CPU: 8

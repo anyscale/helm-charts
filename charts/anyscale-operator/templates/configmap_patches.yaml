@@ -219,7 +219,7 @@ data:
     {{- $additionalInstanceTypesCopy := deepCopy (default dict .Values.additionalInstanceTypes) }}
     {{- $instanceTypes := merge $defaultInstanceTypesCopy $additionalInstanceTypesCopy }}
     {{- range $instanceType, $config := $instanceTypes }}
-      {{- if $config.nodeSelector }}
+      {{- if or $config.nodeSelector $config.tolerations }}
     - kind: Pod
       selector: "anyscale.com/instance-type in ({{ $instanceType }})"
       patch:
@@ -227,6 +227,17 @@ data:
         - op: add
           path: /spec/nodeSelector/{{ $key | replace "/" "~1" }}
           value: "{{ $value }}"
+        {{- end }}
+        {{- range $toleration := $config.tolerations }}
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: {{ quote $toleration.key }}
+            operator: "{{ if $toleration.value }}Equal{{- else }}Exists{{- end }}"
+            {{- if $toleration.value }}
+            value: {{ quote $toleration.value }}
+            {{- end }}
+            effect: {{ quote $toleration.effect | default "NoSchedule" }}
         {{- end }}
       {{- end }}
     {{- end }}

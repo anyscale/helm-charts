@@ -97,6 +97,7 @@ spec:
         {{- if .Values.enableStatusReporting }}
         - --enable-status-reporting=true
         {{- end }}
+        - --operator-version={{ .Chart.Version }}
         resources:
 {{ toYaml .Values.operatorResources.operator | indent 10 }}
         env:
