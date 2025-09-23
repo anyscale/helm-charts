@@ -13,7 +13,7 @@ anyscaleCliToken: ""
 region: ""
 
 # operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "public.ecr.aws/v0b8w7e3/anyscale/kubernetes_manager:ci-59b02256716cb8cb6ddb281ba00dd9a12ce24a6f"
+operatorImage: "us-docker.pkg.dev/anyscale-artifacts/public/kubernetes_manager:ci-530d36609690ec9ea8a30ea7532d47dfeb9d3241"
 
 # vectorImage specifies the Docker image to use for the Vector sidecar.
 vectorImage: "timberio/vector:0.40.0-debian"
@@ -267,3 +267,46 @@ kubernetesClientRateLimiterBurst: 2000
 # bool, enable-status-reporting, default: true
 # Whether to enable status reporting to the Anyscale Control Plane.
 enableStatusReporting: true
+
+
+## OPTIONAL: NGINX Ingress Controller related values. If enabled, the NGINX Ingress Controller will be installed as a dependency.
+ingress-nginx:
+  # bool, enabled, default: false
+  # Whether to install the NGINX Ingress Controller as a dependency.
+  enabled: false
+
+  controller:
+    service:
+      type: LoadBalancer
+      # Annotations grouped by cloud provider. Uncomment the ones you need below.
+      annotations: {}
+        # AWS Configuration
+        # Replace "internet-facing" with "internal" if you want to use an internal load balancer, which is only accessible
+        # from inside the VPC and requires a VPN to access remotely.
+        #
+        # service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+        # service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+        # service.beta.kubernetes.io/aws-load-balancer-type: nlb
+
+        # Google Cloud Configuration
+        # Replace "internet-facing" with "internal" if you want to use an internal load balancer, which is only accessible
+        # from inside the VPC and requires a VPN to access remotely.
+        #
+        # cloud.google.com/load-balancer-type: "External"
+
+        # Azure Configuration
+        # Set the health probe request path to the path of the health probe.
+        #
+        # service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: "/healthz"
+    # Required for authorization snippets to work with Anyscale Services.
+    allowSnippetAnnotations: true
+    config:
+      enable-underscores-in-headers: true
+      # Required for authorization snippets to work with Anyscale Services.
+      annotations-risk-level: "Critical"
+    autoscaling:
+      enabled: true
+
+    ingressClassResource:
+      # The name of the ingress class resource to use. Useful to have this set to something other than "nginx" if you want to deploy multiple isolated ingress controllers within the same cluster.
+      name: anyscale-nginx
