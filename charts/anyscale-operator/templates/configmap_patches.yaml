@@ -181,7 +181,7 @@ data:
       patch:
         - op: add
           {{- if $.Values.acceleratorNodeSelector }}
-          path: /spec/nodeSelector/{{ $.Values.acceleratorNodeSelector }}
+          path: /spec/nodeSelector/{{ include "anyscale-operator.jsonPointer" $.Values.acceleratorNodeSelector }}
           {{- else }}
           path: /spec/nodeSelector/nvidia.com~1gpu.product
           {{- end }}
@@ -194,7 +194,7 @@ data:
       patch:
         - op: add
           {{- if $.Values.acceleratorNodeSelector }}
-          path: /spec/nodeSelector/{{ $.Values.acceleratorNodeSelector }}
+          path: /spec/nodeSelector/{{ include "anyscale-operator.jsonPointer" $.Values.acceleratorNodeSelector }}
           {{- else }}
           path: /spec/nodeSelector/cloud.google.com~1gke-accelerator
           {{- end }}
@@ -225,7 +225,7 @@ data:
       patch:
         {{- range $key, $value := $config.nodeSelector }}
         - op: add
-          path: /spec/nodeSelector/{{ $key | replace "/" "~1" }}
+          path: /spec/nodeSelector/{{ include "anyscale-operator.jsonPointer" $key }}
           value: "{{ $value }}"
         {{- end }}
         {{- range $toleration := $config.tolerations }}

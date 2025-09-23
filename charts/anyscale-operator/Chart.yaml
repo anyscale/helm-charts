@@ -1,7 +1,7 @@
 apiVersion: v2
 description: A Helm chart for Anyscale Operator
 name: anyscale-operator
-version: 0.8.0
+version: 0.8.1
 dependencies:
 - name: ingress-nginx
   version: "4.13.2"
