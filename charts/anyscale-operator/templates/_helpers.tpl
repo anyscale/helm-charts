@@ -8,3 +8,10 @@ Validate controlPlaneURL to ensure it doesn't end with a trailing slash
 {{- end -}}
 {{- $url -}}
 {{- end -}}
+
+{{/*
+Converts string passed in into a json pointer
+*/}}
+{{- define "anyscale-operator.jsonPointer" -}}
+{{- . | replace "~" "~0" | replace "/" "~1" -}}
+{{- end -}}

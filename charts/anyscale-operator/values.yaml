@@ -305,7 +305,7 @@ ingress-nginx:
       # Required for authorization snippets to work with Anyscale Services.
       annotations-risk-level: "Critical"
     autoscaling:
-      enabled: true
+      enabled: false
 
     ingressClassResource:
       # The name of the ingress class resource to use. Useful to have this set to something other than "nginx" if you want to deploy multiple isolated ingress controllers within the same cluster.
