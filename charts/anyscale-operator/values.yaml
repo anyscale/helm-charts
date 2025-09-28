@@ -1,9 +1,21 @@
+global:
+  azure:
+    images:
+      operator:
+        tag: "ci-530d36609690ec9ea8a30ea7532d47dfeb9d3241"
+        image: kubernetes_manager
+        repository: anyscaleoperatortest.azurecr.io/anyscale
+      vector:
+        tag: "0.40.0-debian"
+        image: vector
+        repository: anyscaleoperatortest.azurecr.io/anyscale
+
 # cloudDeploymentId specifies the cloud deployment ID of the AOP.
 cloudDeploymentId: ""
 
 # cloudProvider specifies the cloud provider that the AOP is running on.
 # Supported values are "aws" and "gcp".
-cloudProvider: ""
+cloudProvider: "azure"
 
 # An Anyscale CLI Token. If set, the Anyscale Operator will use this token to authenticate with the Anyscale control plane.
 # If not set, the Anyscale Operator will attempt to bootstrap using a native cloud provider identity (only supported on AWS/GCP).

@@ -1,0 +1,11 @@
+applicationName: com.anyscale.anyscaleoperator.test
+publisher: "Anyscale"
+description: "A test package for Anyscale operator."
+version: 0.0.1
+helmChart: "./anyscale-operator"
+clusterArmTemplate: "./mainTemplate.json"
+uiDefinition: "./createUIDefinition.json"
+registryServer: "anyscaleoperatortest.azurecr.io"
+extensionRegistrationParameters:
+  defaultScope: "cluster"
+  namespace: "anyscale-operator"

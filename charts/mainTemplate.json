@@ -1,0 +1,75 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "type": "String",
+            "metadata": {
+                "description": "The location of AKS resource."
+            }
+        },
+        "clusterResourceName": {
+            "type": "String",
+            "metadata": {
+                "description": "The name of the Managed Cluster resource."
+            }
+        },
+        "extensionResourceName": {
+            "type": "string",
+            "metadata": {
+                "description": "The name of the extension."
+            }
+        },
+        "controlPlaneURL": {
+            "type": "String",
+            "metadata": {
+                "description": "The URL of the Anyscale Control Plane."
+            }
+        },
+        "cloudDeploymentId": {
+            "type": "String"
+        },
+        "operatorIamIdentity": {
+            "type": "String"
+        },
+        "anyscaleCliToken": {
+            "type": "String"
+        }
+    },
+    "variables": {
+        "plan-name": "DONOTMODIFY",
+        "plan-publisher": "DONOTMODIFY",
+        "plan-offerID": "DONOTMODIFY",
+        "releaseTrain": "DONOTMODIFY",
+        "clusterExtensionTypeName": "DONOTMODIFY"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.KubernetesConfiguration/extensions",
+            "apiVersion": "2023-05-01",
+            "name": "[parameters('extensionResourceName')]",
+            "properties": {
+                "extensionType": "[variables('clusterExtensionTypeName')]",
+                "autoUpgradeMinorVersion": true,
+                "releaseTrain": "[variables('releaseTrain')]",
+                "configurationSettings": {
+                    "cloudDeploymentId": "[parameters('cloudDeploymentId')]",
+                    "controlPlaneURL": "[parameters('controlPlaneURL')]",
+                    "operatorIamIdentity": "[parameters('operatorIamIdentity')]",
+                    "anyscaleCliToken": "[parameters('anyscaleCliToken')]"
+                },
+                "configurationProtectedSettings": {
+
+                }
+            },
+            "plan": {
+                "name": "[variables('plan-name')]",
+                "publisher": "[variables('plan-publisher')]",
+                "product": "[variables('plan-offerID')]"
+            },
+            "scope": "[parameters('clusterResourceName')]"
+        }
+    ],
+    "outputs": {
+    }
+}

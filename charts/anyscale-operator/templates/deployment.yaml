@@ -21,6 +21,7 @@ spec:
         {{- if eq .Values.cloudProvider "azure" }}
         azure.workload.identity/use: "true"
         {{- end }}
+        azure-extensions-usage-release-identifier: {{ .Release.Name }}
       {{- if eq .Values.cloudProvider "azure" }}
       annotations:
         azure.workload.identity/inject-proxy-sidecar: "true"
@@ -45,7 +46,7 @@ spec:
       {{- end }}
       containers:
       - name: operator
-        image: '{{ required "operatorImage is required" .Values.operatorImage }}'
+        image: "{{ .Values.global.azure.images.operator.repository }}/{{ .Values.global.azure.images.operator.image }}:{{ .Values.global.azure.images.operator.tag }}"
         imagePullPolicy: {{ .Values.operatorImagePullPolicy | default "IfNotPresent" }}
         command: ["/app/go/infra/kubernetes_manager/kubernetes_manager"]
         args:
@@ -124,7 +125,7 @@ spec:
           - name: vector-config
             mountPath: /tmp/config/vector/
       - name: vector
-        image: '{{ required "vectorImage is required" .Values.vectorImage }}'
+        image: "{{ .Values.global.azure.images.vector.repository }}/{{ .Values.global.azure.images.vector.image }}:{{ .Values.global.azure.images.vector.tag }}"
         imagePullPolicy: {{ .Values.vectorImagePullPolicy | default "IfNotPresent" }}
         command: ["/bin/sh"]
         args:
