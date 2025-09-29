@@ -63,6 +63,7 @@
 						"defaultValue": "https://console.anyscale.com",
 						"constraints": {
 							"required": true,
+							"regex": "^(https?://)?([\\da-z.-]+)\\.([a-z.]{2,6})([/\\w .-]*)*/?$",
 							"validationMessage": "Please enter a valid URL."
 						}
 					},
@@ -73,7 +74,9 @@
 						"toolTip": "Get the cloud deployment ID from your Anyscale Cloud",
 						"defaultValue": "cldsrc_123",
 						"constraints": {
-							"required": true
+							"required": true,
+							"regex": "^[a-z0-9A-Z-_]{1,30}$",
+							"validationMessage": "Please enter a valid cloud deployment ID."
 						}
 					},
 					{
@@ -95,7 +98,9 @@
 						"toolTip": "This will replace the anyscaleCliToken's value inside your values.yaml",
 						"defaultValue": "Dogs",
 						"constraints": {
-							"required": true
+							"required": true,
+							"regex": ".*",
+							"validationMessage": "Please enter a valid token."
 						}
 					}
 				]

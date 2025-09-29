@@ -54,6 +54,7 @@
                 "releaseTrain": "[variables('releaseTrain')]",
                 "configurationSettings": {
                     "cloudDeploymentId": "[parameters('cloudDeploymentId')]",
+                    "region": "[parameters('location')]",
                     "controlPlaneURL": "[parameters('controlPlaneURL')]",
                     "operatorIamIdentity": "[parameters('operatorIamIdentity')]",
                     "anyscaleCliToken": "[parameters('anyscaleCliToken')]"

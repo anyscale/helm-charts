@@ -46,7 +46,7 @@ spec:
       {{- end }}
       containers:
       - name: operator
-        image: "{{ .Values.global.azure.images.operator.repository }}/{{ .Values.global.azure.images.operator.image }}:{{ .Values.global.azure.images.operator.tag }}"
+        image: "{{ .Values.global.azure.images.operator.registry }}/{{ .Values.global.azure.images.operator.image }}:{{ .Values.global.azure.images.operator.tag }}"
         imagePullPolicy: {{ .Values.operatorImagePullPolicy | default "IfNotPresent" }}
         command: ["/app/go/infra/kubernetes_manager/kubernetes_manager"]
         args:
@@ -125,7 +125,7 @@ spec:
           - name: vector-config
             mountPath: /tmp/config/vector/
       - name: vector
-        image: "{{ .Values.global.azure.images.vector.repository }}/{{ .Values.global.azure.images.vector.image }}:{{ .Values.global.azure.images.vector.tag }}"
+        image: "{{ .Values.global.azure.images.vector.registry }}/{{ .Values.global.azure.images.vector.image }}:{{ .Values.global.azure.images.vector.tag }}"
         imagePullPolicy: {{ .Values.vectorImagePullPolicy | default "IfNotPresent" }}
         command: ["/bin/sh"]
         args:
