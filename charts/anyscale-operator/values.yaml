@@ -310,3 +310,31 @@ ingress-nginx:
     ingressClassResource:
       # The name of the ingress class resource to use. Useful to have this set to something other than "nginx" if you want to deploy multiple isolated ingress controllers within the same cluster.
       name: anyscale-nginx
+
+# AWS related values.
+aws:
+  # Support for using a Kubernetes secret to mount AWS credential and config files into the Anyscale Operator and pods it manages.
+  # NOTE: this is not encouraged and should only be used if workload identity federation is not available.
+  credentialSecret:
+    # Whether to mount the AWS credential secret into the Anyscale Operator and pods it manages.
+    enabled: false
+
+    # The name of the credential secret
+    name: anyscale-aws-credentials
+
+    # Whether to create the credential secret. If false, the secret must already exist with the name specified in 'name' above.
+    # and match the format defined in the AWS credential secret template (templates/credentials.yaml)
+    create: false
+
+    # The access key ID of the AWS credential secret.
+    accessKeyId: ""
+    # The secret access key of the AWS credential secret.
+    secretAccessKey: ""
+    # The endpoint value to be stored in the AWS config file, optional.
+    endpointUrl: ""
+
+    # The mount path for the AWS credential secret in the Anyscale Operator pod
+    operatorMountPath: /root/.aws
+
+    # The mount path for the AWS credential secret in the workload pods
+    podMountPath: /tmp/.aws

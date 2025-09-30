@@ -123,6 +123,11 @@ spec:
             mountPath: /tmp/config
           - name: vector-config
             mountPath: /tmp/config/vector/
+          {{- if and .Values.aws.credentialSecret.enabled}}
+          - mountPath: {{ required "A valid .Values.aws.credentialSecret.operatorMountPath is required if .Values.aws.credentialSecret.enabled is true" .Values.aws.credentialSecret.operatorMountPath }}
+            name: aws-creds
+            readOnly: true
+          {{- end }}
       - name: vector
         image: '{{ required "vectorImage is required" .Values.vectorImage }}'
         imagePullPolicy: {{ .Values.vectorImagePullPolicy | default "IfNotPresent" }}
@@ -170,3 +175,8 @@ spec:
           emptyDir: {}
         - name: vector-config
           emptyDir: {}
+        {{- if and .Values.aws.credentialSecret.enabled}}
+        - name: aws-creds
+          secret:
+            secretName: {{ required "A valid .Values.aws.credentialSecret.name is required if .Values.aws.credentialSecret.enabled is true" .Values.aws.credentialSecret.name }}
+        {{- end }}
