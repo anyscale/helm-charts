@@ -145,6 +145,41 @@ data:
                 operator: NotIn
                 values:
                   - "true"
+    {{- else if eq .Values.cloudProvider "azure" }}
+    - kind: Pod
+      selector: "anyscale.com/market-type in (SPOT)"
+      patch:
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: kubernetes.azure.com/scalesetpriority
+                operator: In
+                values:
+                  - "spot"
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: kubernetes.azure.com/scalesetpriority
+            effect: NoSchedule
+            value: "spot"
+    - kind: Pod
+      selector: "anyscale.com/market-type in (ON_DEMAND)"
+      patch:
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: kubernetes.azure.com/scalesetpriority
+                operator: NotIn
+                values:
+                  - "spot"
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: kubernetes.azure.com/scalesetpriority
+                operator: DoesNotExist
     {{- end }}
 
     {{- if .Values.enableZoneNodeSelector }}
@@ -267,6 +302,12 @@ data:
           value: {{ index .Values "ingress-nginx" "controller" "ingressClassResource" "name" }}
     {{- end }}
 
+    {{- if and .Values.aws.credentialSecret.enabled}}
+    ########################################
+    # AWS Credential Secret
+    ########################################
+    {{- include "anyscale-operator.aws_credential_mount_patch" . | nindent 4 }}
+    {{- end }}
     ########################################
     # Additional Patches
     ########################################
