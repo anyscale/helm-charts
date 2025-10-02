@@ -1,7 +1,7 @@
 applicationName: com.anyscale.anyscaleoperator.test
 publisher: "Anyscale"
 description: "A test package for Anyscale operator."
-version: 0.0.1
+version: 0.0.4
 helmChart: "./anyscale-operator"
 clusterArmTemplate: "./mainTemplate.json"
 uiDefinition: "./createUIDefinition.json"

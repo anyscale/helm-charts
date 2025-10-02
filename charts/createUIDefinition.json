@@ -75,7 +75,7 @@
 						"defaultValue": "cldsrc_123",
 						"constraints": {
 							"required": true,
-							"regex": "^[a-z0-9A-Z-_]{1,30}$",
+							"regex": ".*",
 							"validationMessage": "Please enter a valid cloud deployment ID."
 						}
 					},
@@ -87,7 +87,7 @@
 						"defaultValue": "Cats",
 						"constraints": {
 							"required": true,
-							"regex": "^[a-z0-9A-Z-]{1,30}$",
+							"regex": ".*",
 							"validationMessage": "Only alphanumeric characters are allowed, and the value must be 6-30 characters long."
 						}
 					},

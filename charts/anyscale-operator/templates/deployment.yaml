@@ -68,9 +68,7 @@ spec:
         {{- if .Values.kubernetesClientRateLimiterBurst }}
         - --kubernetes-client-rate-limiter-burst={{ .Values.kubernetesClientRateLimiterBurst }}
         {{- end }}
-        {{- if not .Values.anyscaleCliToken }}
         - --region={{ required "region is required for operator registration if anyscaleCliToken is not provided & cloud-native bootstrap scheme is used; must be set to the cloud provider region of this Kubernetes cluster" .Values.region }}
-        {{- end }}
         - --patch-config-path=/tmp/config/patches.yaml
         {{- if .Values.enableGateway }}
         - --enable-gateway=true
