@@ -18,14 +18,20 @@ spec:
     metadata:
       labels:
         app: anyscale-operator
+        {{- with .Values.operatorLabels }}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
         {{- if eq .Values.cloudProvider "azure" }}
         azure.workload.identity/use: "true"
         {{- end }}
-      {{- if eq .Values.cloudProvider "azure" }}
       annotations:
+        {{- with .Values.operatorAnnotations -}}
+        {{- . | toYaml | nindent 8 }}
+        {{- end }}
+        {{- if eq .Values.cloudProvider "azure" }}
         azure.workload.identity/inject-proxy-sidecar: "true"
         azure.workload.identity/proxy-sidecar-port: {{ .Values.azureWorkloadIdentityProxyPort | default 10000 | quote }}
-      {{- end }}
+        {{- end }}
     spec:
       serviceAccount: anyscale-operator
       {{- if .Values.operatorNodeSelection.nodeSelector }}
