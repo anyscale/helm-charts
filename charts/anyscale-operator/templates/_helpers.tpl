@@ -62,3 +62,12 @@ Converts string passed in into a json pointer
 {{- define "anyscale-operator.jsonPointer" -}}
 {{- . | replace "~" "~0" | replace "/" "~1" -}}
 {{- end -}}
+
+{{- define "anyscale-operator.annotations" }}
+{{- $annotations := .Values.operatorAnnotations }}
+{{- $azureAnnotations := dict "azure.workload.identity/inject-proxy-sidecar" "true" "azure.workload.identity/proxy-sidecar-port" (.Values.azureWorkloadIdentityProxyPort | default 10000 | quote ) }}
+{{- if eq .Values.cloudProvider "azure" }}
+{{- $annotations = merge $annotations $azureAnnotations }}
+{{- end }}
+{{ $annotations | toYaml }}
+{{- end }}

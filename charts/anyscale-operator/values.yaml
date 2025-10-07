@@ -70,6 +70,12 @@ operatorNodeSelection:
   # tolerations allow the operator pod to schedule on nodes with matching taints
   tolerations: []
 
+# operatorLabels allows custom labels to be attached to the operator deployment
+operatorLabels: {}
+
+# operatorAnnotations allows custom annotations to be attached to the operator deployment
+operatorAnnotations: {}
+
 # defaultInstanceTypes provides a list of default Pod shapes that can be
 # used in Anyscale workloads (abstracted as virtual "instance types").
 #
