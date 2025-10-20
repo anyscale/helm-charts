@@ -1,281 +1,582 @@
-# cloudDeploymentId specifies the cloud deployment ID of the AOP.
-cloudDeploymentId: ""
+################################################################
+# Global configuration
+################################################################
+global:
+  cloudDeploymentId: ""
+  cloudProvider: ""  # aws, gcp, azure, generic
 
-# cloudProvider specifies the cloud provider that the AOP is running on.
-# Supported values are "aws" and "gcp".
-cloudProvider: ""
+  # string, region, default: ""
+  # DEPRECATED: Use aws.region if needed.
+  region: ""
 
-# An Anyscale CLI Token. If set, the Anyscale Operator will use this token to authenticate with the Anyscale control plane.
-# If not set, the Anyscale Operator will attempt to bootstrap using a native cloud provider identity (only supported on AWS/GCP).
-anyscaleCliToken: ""
+  # Configuration for authenticating with the Anyscale Control Plane
+  auth:
+    # string, iamIdentity
+    # The IAM identity to use for the Anyscale Operator.
+    # This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the service account.
+    # If not set, the Anyscale Operator will use the IAM identity of the Kubernetes node.
+    iamIdentity: ""
+    # string, anyscaleCliToken
+    # The Anyscale CLI token to use for the Anyscale Operator.
+    # If not set, the Anyscale Operator will attempt to bootstrap using a native cloud provider identity (only supported on AWS/GCP).
+    anyscaleCliToken: ""
 
-# region specifies the region that the Kubernetes cluster is running in.
-region: ""
 
-# operatorImage specifies the Docker image to use for the Anyscale Operator.
-operatorImage: "us-docker.pkg.dev/anyscale-artifacts/public/kubernetes_manager:ci-530d36609690ec9ea8a30ea7532d47dfeb9d3241"
+  # AWS specific configuration
+  aws:
+    # string, region, default: ""
+    # REQUIRED (for AWS with workload identity): The region of the AWS cluster.
+    # This is required for operator registration with workload identity when global.auth.anyscaleCliToken is not provided.
+    region: ""
 
-# vectorImage specifies the Docker image to use for the Vector sidecar.
-vectorImage: "timberio/vector:0.40.0-debian"
+    s3:
+      # Forces the operator to use path-style S3 URLs
+      # Sets https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Config.html#s3ForcePathStyle-property
+      usePathStyle: false
 
-# operatorIamIdentity specifies the IAM identity from the cloud provider to bind to the Anyscale Operator.
-# This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the
-# service account. If not set, the Anyscale Operator will use the IAM identity of the Kubernetes node.
-operatorIamIdentity: ""
+  # GCP specific configuration
+  gcp: {}
 
-# operatorResources specifies the resource limits and requests for Anyscale Operator deployment.
-operatorResources:
-  # 'operator' is the container for the Anyscale Operator.
-  operator:
-    requests:
-      memory: 512Mi
-      cpu: 1
-    limits:
-      memory: 2Gi
-  # 'vector' is a sidecar used to forward telemetry (operator logs/metrics) to the Anyscale Control Plane.
-  vector:
-    requests:
-      cpu: 100m
-      memory: 512Mi
-    limits:
-      memory: 512Mi
+  # Azure specific configuration
+  azure:
+    workloadIdentity:
+      proxyPort: 10000
 
-operatorReplicas: 1
+################################################################
+# Networking and ingress configuration
+################################################################
+networking:
+  # Ingress configuration
+  # By default the Anyscale Operator will use Ingress resources to manage routing to workloads.
+  # Configuration below is optional and only needed if you want to override the default ingress address set by your ingress controller.
+  ingress:
+    # string, address, default: ""
+    # If set, this will be the address that Anyscale uses for DNS resolution
+    # for humans (e.g. Anyscale platform users viewing the Ray Dashboard via
+    # the Anyscale UI) to reach the ingress of this Kubernetes cluster. By
+    # default, Anyscale will read the address from the status field of the
+    # Ingress resource created, but in certain cases, that may not be desired.
+    #
+    # This is also used for resolving DNS for Anyscale Services.
+    # This can be either an IP address or a hostname.
+    address: ""
 
-# operatorExcludeComponentVerification allows specifying components to skip verification for during the
-# operator startup sequence and status checks
-#
-# Valid values are:
-#  - STORAGE_BUCKET
-#  - KUBERNETES_VERSION
-#  - GATEWAY_RESOURCES
-#  - CLOUD_RESOURCES
-#  - IAM_IDENTITY
-#  - KUBERNETES_PERMISSIONS
-#
-# By default, all components will be verified during the operator startup sequence.
-operatorExcludeComponentVerification: []
+  # Gateway configuration
+  gateway:
+    # bool, enabled, default: false
+    # Whether to enable gateway support. If set to true, the Anyscale Operator will
+    # use Gateway CRs to manage routing instead of Ingress resources. You must maintain the Gateway itself externally
+    # and reference it in the "name" field.
+    enabled: false
 
-# operatorImagePullSecrets allows configuring imagePullSecrets to enable pulling the operator image through a private docker proxy.
-operatorImagePullSecrets: []
+    # string, name, default: ""
+    # The name of the gateway.
+    name: ""
 
-# operatorNodeSelection allows configuring where the Anyscale Operator pods are scheduled.
-# Either nodeSelector or affinity can be specified
-# If both are specified, nodeSelector takes precedence.
-operatorNodeSelection:
+    # string, ip, default: ""
+    # string, hostname, default: ""
+    # Either ip or hostname should be provided when using gateway.
+    # This is used for creating DNS records that route traffic to the gateway.
+    ip: ""
+    hostname: ""
+
+    # string, apiVersion, default: "gateway.networking.k8s.io/v1"
+    # The API version of the gateway. Supported values: "gateway.networking.k8s.io/v1", "networking.istio.io/v1alpha3".
+    # If gateway.networking.k8s.io/v1 is used, the HTTPRoute CRD must be installed in the cluster.
+    # If networking.istio.io/v1alpha3 is used, the VirtualService CRD must be installed in the cluster.
+    apiVersion: "gateway.networking.k8s.io/v1"
+
+################################################################
+# Workload configuration - settings that affect user workloads
+################################################################
+workloads:
+  # Service account for workloads
+  serviceAccount:
+    # string, name, default: ""
+    # The name of the service account to use for the workloads.
+    # If not set, the Anyscale Operator will use the default service account.
+    name: ""
+
+    # string, iamMappingAnnotation, default: "anyscale.com/iam-mapping"
+    # The annotation key used to identify pods that use IAM mapping.
+    # If this annotation is present, the Anyscale Operator will skip applying `workload.serviceAccount.name` to the pod.
+    iamMappingAnnotation: "anyscale.com/iam-mapping"
+
+  # Instance types configuration
+  instanceTypes:
+    # bool, enableDefaults, default: true
+    # Whether to enable default instance types.
+    enableDefaults: true
+    # Default instance types provided by the chart
+    # These provide a list of default Pod shapes that can be
+    # used in Anyscale workloads (abstracted as virtual "instance types").
+    #
+    # Node selectors and tolerations that apply specifically to these instance types can be
+    # placed directly under each instance type under the `nodeSelector` and `tolerations` keys.
+    defaults:
+      2CPU-8GB:
+        resources:
+          CPU: 2
+          memory: 8Gi
+      4CPU-16GB:
+        resources:
+          CPU: 4
+          memory: 16Gi
+      8CPU-32GB:
+        resources:
+          CPU: 8
+          memory: 32Gi
+      8CPU-32GB-1xT4:
+        resources:
+          CPU: 8
+          GPU: 1
+          memory: 32Gi
+          accelerators:
+            - T4
+
+    # Additional user-defined instance types.
+    # If enableDefaults is true, these will be merged with the default instance types.
+    # If enableDefaults is false, these will replace the default instance types.
+    #
+    # Instance Type Schema:
+    #
+    # <instance-type-name>:
+    #   # a mapping of resource names to resource quantities https://kubernetes.io/docs/reference/kubernetes-api/common-definitions/quantity/
+    #   resources:
+    #     CPU: <resource-quantity> # NOTE: value in cores must be a whole number, i.e. 2 or 2000m, not 2500m
+    #     memory: <resource-quantity>
+    #     GPU: <resource-quantity>
+    #     'anyscale/tpu_hosts': <resource-quantity> # Anyscale specific resource for TPU hosts, must be a whole number
+    #     <custom-resource-key>: <resource-quantity> # Any Extended Resource registered in the Kubernetes cluster
+    #     # a list of accelerator types
+    #     accelerators:
+    #       - <accelerator-type>
+    #       - <accelerator-type-2>
+    #   nodeSelector:
+    #     <node-selector-key>: <node-selector-value>
+    #   tolerations:
+    #     - key: <toleration-key>
+    #       operator: <toleration-operator>
+    #       effect: <toleration-effect>
+    #
+    # Example:
+    #
+    # additional:
+    #   2CPU-8GB-SSD-Reserved: # Example instance type with node selector and toleration
+    #     resources:
+    #       CPU: 2
+    #       memory: 8Gi
+    #     nodeSelector:
+    #       disktype: ssd
+    #     tolerations:
+    #       - key: reserved
+    #         value: example-anyscale
+    #         operator: Equal
+    #         effect: NoSchedule
+    #   8CPU-16GB-TPU-V5E-2x2-SINGLEHOST: # Example single-host TPU instance type
+    #     resources:
+    #       CPU: 8
+    #       TPU: 4
+    #       memory: 16Gi
+    #     accelerators:
+    #       - TPU-V5E
+    #     # Hint to Anyscale that this is a single-host deployment.
+    #     'anyscale/tpu_hosts': 1
+    #     nodeSelector:
+    #       cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
+    #       cloud.google.com/gke-tpu-topology: 2x2
+    #       cloud.google.com/gke-spot: "true"
+    #   8CPU-16GB-TPU-V5E-4x4-MULTIHOST: # Example multi-host TPU instance type
+    #     resources:
+    #       CPU: 8
+    #       TPU: 4
+    #       memory: 16Gi
+    #     accelerators:
+    #       - TPU-V5E
+    #     # Hint to Anyscale that this is a multi-host deployment,
+    #     # and so we need to set the TPU_WORKER_HOSTNAMES envvar
+    #     # to link together all of the hosts in this TPU slice.
+    #     'anyscale/tpu_hosts': 4
+    #     nodeSelector:
+    #       cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
+    #       cloud.google.com/gke-tpu-topology: 4x4
+    #       cloud.google.com/gke-spot: "true"
+    additional: {}
+
+  # bool, enableAnyscaleRayHeadNodePDB, default: true
+  # Whether to create a PodDisruptionBudget to avoid head node evictions.
+  # This could block the k8s cluster upgrade or maintenance.
+  # If enabled, remember to delete the PDB before upgrading the cluster.
+  enableAnyscaleRayHeadNodePDB: true
+
+  # bool, enableZoneSelector, default: false
+  # Whether to enable zone-based node selection.
+  # If set to true, then the "topology.kubernetes.io/zone" nodeSelector will be applied
+  # to all Anyscale workloads with a request to run in a specific zone specified through
+  # the compute configuration.
+  #
+  # This is disabled by default, since many cluster autoscalers do not respect the zone
+  # node selector when autoscaling (e.g. they do not pick the right subnet to launch an
+  # instance inside of).
+  enableZoneSelector: false
+
+  # bool, enableKarpenterSupport, default: false
+  # Whether to enable Karpenter support.
+  # If set to true, the Anyscale Operator will use Karpenter node selectors and tolerations to handle market type.
+  enableKarpenterSupport: false
+
+  # Market type support
+  # nodeSelector, affinity and toleration patches for pods based on market type
+  # These patches match the Anyscale recommended NodeGroup configurations,
+  # including those provided by the Anyscale Cloud Foundations Terraform Modules
+  marketType:
+    # bool, enableDefaults, default: true
+    # Whether to enable default market type patches for each cloud provider.
+    # If false, only the values passed into 'additional' will be applied.
+    enableDefaults: true
+
+    # Default market type patches for any cloud providers
+    generic:
+      all:
+        # This may optionally be added to Anyscale workload nodes
+        # Allows scheduling on Anyscale's partition of nodes
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: node.anyscale.com/capacity-type
+            value: "ON_DEMAND"
+            effect: NoSchedule
+      ondemand:
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: node.anyscale.com/capacity-type
+            value: "ON_DEMAND"
+            effect: NoSchedule
+      spot:
+        # Spot workloads can tolerate SPOT tainted nodes
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: node.anyscale.com/capacity-type
+            value: "SPOT"
+            effect: NoSchedule
+
+    # Default market type patches for AWS
+    aws:
+      ondemand:
+        - op: add
+          path: /spec/nodeSelector/eks.amazonaws.com~1capacityType
+          value: "ON_DEMAND"
+        - op: add
+          path: /metadata/annotations/cluster-autoscaler.kubernetes.io~1safe-to-evict
+          value: "false"
+
+      spot:
+        - op: add
+          path: /spec/nodeSelector/eks.amazonaws.com~1capacityType
+          value: "SPOT"
+    # Default market type patches if workloads.enableKarpenterSupport is true, will override the cloud provider specific defaults
+    karpenter:
+      ondemand:
+        - op: add
+          path: /spec/nodeSelector/karpenter.sh~1capacity-type
+          value: "on-demand"
+        - op: add
+          path: /metadata/annotations/cluster-autoscaler.kubernetes.io~1safe-to-evict
+          value: "false"
+      spot:
+        - op: add
+          path: /spec/nodeSelector/karpenter.sh~1capacity-type
+          value: "spot"
+    # Default market type patches for GCP
+    gcp:
+      ondemand:
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: cloud.google.com/gke-spot
+                operator: DoesNotExist
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: cloud.google.com/gke-spot
+                operator: NotIn
+                values:
+                  - "true"
+      spot:
+        - op: add
+          path: /spec/nodeSelector/cloud.google.com~1gke-spot
+          value: "true"
+
+    # Default market type patches for Azure
+    azure:
+      ondemand:
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: kubernetes.azure.com/scalesetpriority
+                operator: NotIn
+                values:
+                  - "spot"
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: kubernetes.azure.com/scalesetpriority
+                operator: DoesNotExist
+
+      spot:
+        - op: add
+          path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
+          value:
+            matchExpressions:
+              - key: kubernetes.azure.com/scalesetpriority
+                operator: In
+                values:
+                  - "spot"
+        - op: add
+          path: /spec/tolerations/-
+          value:
+            key: kubernetes.azure.com/scalesetpriority
+            effect: NoSchedule
+            value: "spot"
+
+    # Additional user-defined market type patches.
+    # If enableDefaults is true, these will be merged with the generic and cloud provider specific defaults.
+    # If enableDefaults is false, these will replace the generic and cloud provider specific defaults.
+    additional:
+      all:
+      ondemand:
+      spot:
+
+
+  # Accelerator/GPU support
+  # Patches for scheduling workloads with GPU/accelerator requirements
+  accelerator:
+    # bool, enableDefaults, default: true
+    # Whether to enable default accelerator patches for each cloud provider.
+    enableDefaults: true
+
+    tolerations:
+      # Tolerations applied to all GPU/accelerator workloads
+      default:
+        # GPU workloads can tolerate GPU tainted nodes
+        - key: node.anyscale.com/accelerator-type
+          value: "GPU"
+          effect: NoSchedule
+      # Additional user-defined accelerator tolerations.
+      # If enableDefaults is true, these will be merged with the defaults.
+      # If enableDefaults is false, these will replace the defaults.
+      additional: {}
+
+    # string, customNodeSelectorKey, default: ""
+    # Custom node selector key to use instead of cloud provider defaults.
+    # If not set, uses cloud provider specific defaults:
+    # - AWS: "nvidia.com/gpu.product"
+    # - GCP: "cloud.google.com/gke-accelerator"
+    # - Azure: "nvidia.com/gpu.product"
+    customNodeSelectorKey: ""
+
+    # Accelerator type to node selector value mappings per cloud provider
+    nodeSelectors:
+      aws:
+        V100: "Tesla-V100-SXM2-16GB"
+        T4: "Tesla-T4"
+        L4: "NVIDIA-L4"
+        A10G: "NVIDIA-A10G"
+        L40S: "NVIDIA-L40S"
+        A100-40G: "NVIDIA-A100-SXM4-40GB"
+        A100-80G: "NVIDIA-A100-SXM4-80GB"
+        H100: "NVIDIA-H100-PCIe-80GB"
+
+      gcp:
+        T4: "nvidia-tesla-t4"
+        L4: "nvidia-l4"
+        A100-40G: "nvidia-tesla-a100"
+        A100-80G: "nvidia-a100-80gb"
+        H100: "nvidia-h100-80gb"
+        H100-MEGA: "nvidia-h100-mega-80gb"
+
+      azure:
+        T4: "NVIDIA-T4"
+        A10: "NVIDIA-A10"
+        A100: "NVIDIA-A100"
+        H100: "NVIDIA-H100"
+
+      # Additional user-defined accelerator mappings (cloud provider agnostic)
+      # If enableDefaults is true, these will be merged with the defaults for the current cloud provider.
+      # If enableDefaults is false, these will replace the default accelerator mappings.
+      additional: {}
+      # Example:
+      # additional:
+      #   H100: "NVIDIA-H100"
+      #   H200: "nvidia-h200-80gb"
+
+################################################################
+# Additional patches
+################################################################
+# array, patches, default: []
+# Patches to apply to any resources managed by the Anyscale Operator
+# Example:
+# patches:
+#   - kind: Pod # The type of the resource to patch.
+#   - selector: "my-annotation" in (my-value) # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-based-requirement
+#     patch: # list of patches RFC-6902 JSON Patch format
+#       - op: add
+#         path: /metadata/annotations/custom-annotation
+#         value: "custom-value"
+patches: []
+
+################################################################
+# Operator deployment configuration
+################################################################
+operator:
+  # string, name, default: "anyscale-operator"
+  # The name of the operator. This is used to identify resources related to the operator in the Kubernetes cluster.
+  # Such as the deployment, service account, role, validating webhook, etc.
+  name: "anyscale-operator"
+
+  # array, imagePullSecrets, default: []
+  # The image pull secrets to use for the operator.
+  imagePullSecrets: []
+
+  # int, replicas, default: 1
+  # The number of replicas of the operator.
+  replicas: 1
+
+
+  # Either nodeSelector or affinity can be specified
+  # If both are specified, nodeSelector takes precedence.
+
+  # map, nodeSelector, default: {}
+  # The node selector to use for the operator.
   # nodeSelector is a map of key-value pairs used for basic node selection
   nodeSelector: {}
+
+  # map, affinity, default: {}
+  # The affinity to use for the operator.
   # affinity allows for more complex node selection rules
   affinity: {}
+
+  # array, tolerations, default: []
+  # The tolerations to use for the operator.
   # tolerations allow the operator pod to schedule on nodes with matching taints
   tolerations: []
 
-# operatorLabels allows custom labels to be attached to the operator deployment
-operatorLabels: {}
+  # map, labels, default: {}
+  # The labels to use for the operator pods.
+  labels: {}
 
-# operatorAnnotations allows custom annotations to be attached to the operator deployment
-operatorAnnotations: {}
+  # map, annotations, default: {}
+  # The annotations to use for the operator pods.
+  annotations: {}
 
-# defaultInstanceTypes provides a list of default Pod shapes that can be
-# used in Anyscale workloads (abstracted as virtual "instance types").
-#
-# Node selectors and tolerations that apply specifically to these instance types can be
-# placed directly under each instance type under the `nodeSelector` and `tolerations` keys.
-defaultInstanceTypes:
-  2CPU-8GB:
+  # Operator Container Configuration
+  container:
+    image:
+      registry: us-docker.pkg.dev
+      image: anyscale-artifacts/public/kubernetes_manager
+      tag: "ci-fe4d6d5d24deb02caa5ea9b60c8e837ac1ca9e05"
+
     resources:
-      CPU: 2
-      memory: 8Gi
-  4CPU-16GB:
-    resources:
-      CPU: 4
-      memory: 16Gi
-  8CPU-32GB:
-    resources:
-      CPU: 8
-      memory: 32Gi
-  8CPU-32GB-1xT4:
-    resources:
-      CPU: 8
-      GPU: 1
-      memory: 32Gi
-      'accelerator_type:T4': 1
-  # Uncomment the following values if you are on GKE & want to use TPU node groups.
-  # These are examples; many other TPU configurations & topologies are supported.
-  #
-  # 8CPU-16GB-TPU-V5E-2x2-SINGLEHOST:
-  #   resources:
-  #     CPU: 8
-  #     TPU: 4
-  #     memory: 16Gi
-  #     'accelerator_type:TPU-V5E': 1
-  #     # Hint to Anyscale that this is a single-host deployment.
-  #     'anyscale/tpu_hosts': 1
-  #   nodeSelector:
-  #     cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
-  #     cloud.google.com/gke-tpu-topology: 2x2
-  #     cloud.google.com/gke-spot: "true"
-  #   tolerations:
-  #     - key: "custom-taint"
-  #       operator: "Exists"
-  #       effect: "NoSchedule"
-  # 8CPU-16GB-TPU-V5E-4x4-MULTIHOST:
-  #   resources:
-  #     CPU: 8
-  #     TPU: 4
-  #     memory: 16Gi
-  #     'accelerator_type:TPU-V5E': 1
-  #     # Hint to Anyscale that this is a multi-host deployment,
-  #     # and so we need to set the TPU_WORKER_HOSTNAMES envvar
-  #     # to link together all of the hosts in this TPU slice.
-  #     'anyscale/tpu_hosts': 4
-  #   nodeSelector:
-  #     cloud.google.com/gke-tpu-accelerator: tpu-v5-lite-podslice
-  #     cloud.google.com/gke-tpu-topology: 4x4
-  #     cloud.google.com/gke-spot: "true"
+      requests:
+        memory: 512Mi
+        cpu: 1
+      limits:
+        memory: 2Gi
 
-# additionalInstanceTypes provides a list of additional Pod shapes that can be
-# used in Anyscale workloads.
-additionalInstanceTypes: {}
+  # Vector Sidecar Configuration
+  # Vector is a sidecar used to forward telemetry (operator logs/metrics) to the Anyscale Control Plane.
+  vector:
+    image:
+      registry: "" # empty string means use the default registry (docker.io)
+      image: timberio/vector
+      tag: "0.40.0-debian"
 
-# additionalPatches provides a list of additional patches that will be respected
-# by the operator when creating Pods & other types of Kubernetes resources.
-additionalPatches: []
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        memory: 512Mi
 
-# supported_accelerators provides a mapping of Ray-supported accelerator types
-# to accelerator names that can be used in a GPU nodeSelector for scheduling.
-supportedAccelerators:
+  config:
+    kubernetesClient:
+      # string, kubeConfigPath
+      # The path to the kubeconfig file to use for the Kubernetes client.
+      # If not provided, in-cluster configuration will be used.
+      kubeConfigPath: ""
+      rateLimiter:
+        qps: 1000
+        burst: 2000
+
+    unscheduledPodReaper:
+      # duration, reconcileInterval, default: 1m
+      # The interval at which the unscheduled pod reaper should reconcile.
+      reconcileInterval: "1m"
+      # duration, terminationThreshold, default: 10m
+      # The threshold after which an unscheduled Pod should be considered leaked + terminated.
+      terminationThreshold: "10m"
+
+    status:
+      # bool, reportingEnabled, default: true
+      # Whether to enable status reporting to the Anyscale Control Plane.
+      reportingEnabled: true
+      # array, excludeComponentVerification, default: []
+      # Allows specifying components to skip verification for during the
+      # operator startup sequence and status checks
+      #
+      # Valid values are:
+      #  - STORAGE_BUCKET
+      #  - KUBERNETES_VERSION
+      #  - GATEWAY_RESOURCES
+      #  - CLOUD_RESOURCES
+      #  - IAM_IDENTITY
+      #  - KUBERNETES_PERMISSIONS
+      #
+      # By default, all components will be verified during the operator startup sequence.
+      excludeComponentVerification: []
+      checkInterval: "5m"
+      reportInterval: "30s"
+
+################################################################
+# Credential secret mounting configuration
+################################################################
+# Support for using a Kubernetes secret to mount credential and config files into the Anyscale Operator and pods it manages.
+# NOTE: this is not encouraged and should only be used if workload identity federation is not available.
+credentialMount:
+  # AWS credential secret configuration
   aws:
-    T4: "Tesla-T4"
-    A10G: "NVIDIA-A10G"
-  azure:
-    T4: "NVIDIA-T4"
-    A10: "NVIDIA-A10"
-    A100: "NVIDIA-A100"
-    H100: "NVIDIA-H100"
-  gcp:
-    V100: "nvidia-tesla-v100"
-    P100: "nvidia-tesla-p100"
-    T4: "nvidia-tesla-t4"
-    L4: "nvidia-l4"
-    A100-40G: "nvidia-tesla-a100"
-    A100-80G: "nvidia-a100-80gb"
-    H100: "nvidia-h100-80gb"
-    H100-MEGA: "nvidia-h100-mega-80gb"
+    enabled: false
 
-# If set to true, then the "topology.kubernetes.io/zone" nodeSelector will be applied
-# to all Anyscale workloads with a request to run in a specific zone specified through
-# the compute configuration.
-#
-# This is disabled by default, since many cluster autoscalers do not respect the zone
-# node selector when autoscaling (e.g. they do not pick the right subnet to launch an
-# instance inside of).
-enableZoneNodeSelector: false
+    fromSecret:
+      # The name of the credential secret
+      name: anyscale-aws-credentials
+      # The mount path for the AWS credential secret in the Anyscale Operator pod
+      operatorMountPath: /root/.aws
+      # The mount path for the AWS credential secret in the workload pods
+      podMountPath: /tmp/.aws
+    createSecret:
+      # Whether to create the credential secret. If false, the secret must already exist with the name specified in 'name' above.
+      # and match the format defined in the AWS credential secret template (templates/credentials.yaml)
+      create: false
 
-# acceleratorNodeSelector provides the nodeSelector key to use when scheduling
-# Pods with accelerators. If not set, the default key for the cloud provider
-# will be used.
-acceleratorNodeSelector: ""
+      # The access key ID of the AWS credential secret.
+      accessKeyId: ""
+      # The secret access key of the AWS credential secret.
+      secretAccessKey: ""
+      # The endpoint value to be stored in the AWS config file, optional.
+      endpointUrl: ""
 
-# If set, this service account will be assigned to Pods running Anyscale workloads.
-workloadServiceAccountName: ""
-
-# IAM mapping annotation key used to identify pods that use IAM mapping
-iamMappingAnnotation: "anyscale.com/iam-mapping"
-
-# Default tolerances - these match the Anyscale recommended NodeGroup configurations,
-# including those provided by the Anyscale Cloud Foundations Terraform Modules
-workloadDefaultTolerances:
-  all:
-    # This may optionally be added to Anyscale workload nodes
-    # Allows scheduling on Anyscale's partition of nodes
-    node.anyscale.com/capacity-type:
-      value: "ON_DEMAND"
-      effect: "NoSchedule"
-  gpu:
-    # GPU workloads can tolerate GPU tainted nodes
-    node.anyscale.com/accelerator-type:
-      value: "GPU"
-      effect: "NoSchedule"
-  spot:
-    # Spot workloads can tolerate SPOT tainted nodes
-    node.anyscale.com/capacity-type:
-      value: "SPOT"
-      effect: "NoSchedule"
-
-# If set, this will be the address that Anyscale uses for DNS resolution
-# for humans (e.g. Anyscale platform users viewing the Ray Dashboard via
-# the Anyscale UI) to reach the ingress of this Kubernetes cluster. By
-# default, Anyscale will read the address from the status field of the
-# Ingress resource created, but in certain cases, that may not be desired.
-#
-# This is also used for resolving DNS for Anyscale Services.
-#
-# This can be either an IP address or a hostname.
-ingressAddress: ""
-
-
-# If set to true, this will create a PodDisruptionBudget to avoid
-# head node evictions.
-# This could block the k8s cluster upgrade or maintenance.
-# If enabled, remember to delete the PDB before upgrading the cluster.
-enableAnyscaleRayHeadNodePDB: true
-
-enableKarpenterSupport: false
-
-## Gateway related values.
-
-# enableGateway controls whether to enable the gateway functionality.
-# When set to true, the load balancing is done through the gateway.
-enableGateway: false
-
-# gatewayName specifies the name of the gateway to be used.
-# This is used to identify the gateway resource in the k8s cluster.
-gatewayName: ""
-
-# gatewayIp specifies the IP address of the gateway.
-# This is used for routing traffic through the gateway.
-gatewayIp: ""
-
-# gatewayHostname specifies the hostname of the gateway.
-# This is used for routing traffic through the gateway.
-gatewayHostname: ""
-
-# gatewayAPIVersion specifies the API version of the gateway.
-# This is used to identify the gateway resource in the k8s cluster.
-# Supported values are "gateway.networking.k8s.io/v1" and "networking.istio.io/v1alpha3".
-gatewayAPIVersion: "gateway.networking.k8s.io/v1"
-
-# Sets https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/Config.html#s3ForcePathStyle-property
-storageS3UsePathStyle: false
-
-# string, kube-config
-# The path to the kubeconfig file to use for the Kubernetes client.
-# If not provided, in-cluster configuration will be used.
-kubeConfigPath: ""
-
-# duration, unscheduled-pod-reaper-reconcile-interval, default: 1m
-# The interval at which the unscheduled pod reaper should reconcile.
-unscheduledPodReaperReconcileInterval:
-
-# duration, unscheduled-pod-reaper-termination-threshold, default: 10m
-# The threshold after which an unscheduled Pod should be considered leaked + terminated.
-unscheduledPodReaperTerminationThreshold:
-
-# float32, kubernetes-client-rate-limiter-qps, default: 1000
-# The QPS rate limit for the Kubernetes client. Recommended to set to large values (e.g. 1000) to support large workloads.
-kubernetesClientRateLimiterQPS: 1000
-
-# int, kubernetes-client-rate-limiter-burst, default: 2000
-# The burst rate limit for the Kubernetes client. Recommended to set to large values (e.g. 2000) to support large workloads.
-kubernetesClientRateLimiterBurst: 2000
-
-# bool, enable-status-reporting, default: true
-# Whether to enable status reporting to the Anyscale Control Plane.
-enableStatusReporting: true
-
-
-## OPTIONAL: NGINX Ingress Controller related values. If enabled, the NGINX Ingress Controller will be installed as a dependency.
+################################################################
+# OPTIONAL: NGINX Ingress Controller related values.
+# If enabled, the NGINX Ingress Controller will be installed as
+# a dependency.
+################################################################
 ingress-nginx:
   # bool, enabled, default: false
   # Whether to install the NGINX Ingress Controller as a dependency.
@@ -316,31 +617,3 @@ ingress-nginx:
     ingressClassResource:
       # The name of the ingress class resource to use. Useful to have this set to something other than "nginx" if you want to deploy multiple isolated ingress controllers within the same cluster.
       name: anyscale-nginx
-
-# AWS related values.
-aws:
-  # Support for using a Kubernetes secret to mount AWS credential and config files into the Anyscale Operator and pods it manages.
-  # NOTE: this is not encouraged and should only be used if workload identity federation is not available.
-  credentialSecret:
-    # Whether to mount the AWS credential secret into the Anyscale Operator and pods it manages.
-    enabled: false
-
-    # The name of the credential secret
-    name: anyscale-aws-credentials
-
-    # Whether to create the credential secret. If false, the secret must already exist with the name specified in 'name' above.
-    # and match the format defined in the AWS credential secret template (templates/credentials.yaml)
-    create: false
-
-    # The access key ID of the AWS credential secret.
-    accessKeyId: ""
-    # The secret access key of the AWS credential secret.
-    secretAccessKey: ""
-    # The endpoint value to be stored in the AWS config file, optional.
-    endpointUrl: ""
-
-    # The mount path for the AWS credential secret in the Anyscale Operator pod
-    operatorMountPath: /root/.aws
-
-    # The mount path for the AWS credential secret in the workload pods
-    podMountPath: /tmp/.aws
