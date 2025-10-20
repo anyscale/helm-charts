@@ -15,8 +15,8 @@ rules:
 - apiGroups: ["networking.k8s.io"]
   resources: ["ingresses"]
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
-{{- if .Values.enableGateway }}
-{{- if eq .Values.gatewayAPIVersion "networking.istio.io/v1alpha3" }}
+{{- if .Values.networking.gateway.enabled }}
+{{- if eq .Values.networking.gateway.apiVersion "networking.istio.io/v1alpha3" }}
 - apiGroups: ["networking.istio.io"]
   resources: ["virtualservices"]
 {{- else }}
@@ -25,7 +25,7 @@ rules:
 {{- end }}
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- end }}
-{{- if gt (int .Values.operatorReplicas) 1 }}
+{{- if gt (int .Values.operator.replicas) 1 }}
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
   verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]

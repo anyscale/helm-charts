@@ -1,4 +1,11 @@
-{{if or .Values.defaultInstanceTypes .Values.additionalInstanceTypes}}
+{{- $allInstanceTypes := dict }}
+{{- if .Values.workloads.instanceTypes.enableDefaults }}
+  {{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.defaults) }}
+{{- end }}
+{{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.additional) }}
+
+{{- /* Only render the ConfigMap if there are instance types defined. This allows users to disable default instance types without additional configuration. */ -}}
+{{- if $allInstanceTypes }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -13,10 +20,5 @@ metadata:
 data:
   version: v1
   instance_types.yaml: |-
-    {{- if .Values.defaultInstanceTypes }}
-{{ toYaml .Values.defaultInstanceTypes | indent 4 }}
-    {{- end }}
-    {{- if .Values.additionalInstanceTypes }}
-{{ toYaml .Values.additionalInstanceTypes | indent 4 }}
-    {{- end }}
+{{ toYaml $allInstanceTypes | indent 4 }}
 {{- end }}

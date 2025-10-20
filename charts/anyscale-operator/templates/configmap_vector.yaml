@@ -53,8 +53,8 @@ data:
           .pod = "${POD_NAME}"
           .pod_ip = "${POD_IP}"
           .namespace = "${POD_NAMESPACE}"
-          {{ if .Values.region }}
-          .region = "{{ .Values.region }}"
+          {{ if .Values.global.region }}
+          .region = "{{ .Values.global.region }}"
           {{ end }}
       system_metrics:
         type: remap
@@ -65,11 +65,11 @@ data:
           .tags.pod = "${POD_NAME}"
           .tags.pod_ip = "${POD_IP}"
           .tags.namespace = "${POD_NAMESPACE}"
-          {{ if .Values.region }}
-          .tags.region = "{{ .Values.region }}"
+          {{ if .Values.global.region }}
+          .tags.region = "{{ .Values.global.region }}"
           {{ end }}
-          .tags.cloud_provider = "{{ .Values.cloudProvider }}"
-          .tags.cloud_resource_id = "{{ .Values.cloudDeploymentId }}"
+          .tags.cloud_provider = "{{ .Values.global.cloudProvider }}"
+          .tags.cloud_resource_id = "{{ .Values.global.cloudDeploymentId }}"
           .tags.cloud_id = get_enrichment_table_record("runtime_metadata", {"key": "cloud_id"}).value ?? "unknown"
     sinks:
       # Forward Vector internal metrics to the system cortex.
@@ -82,8 +82,8 @@ data:
         labels:
             cloud_id: '{{ "{{" }} cloud_id {{ "}}" }}'
             pod_ip: "${POD_IP}"
-            cloudProvider: {{ .Values.cloudProvider }}
-            cloud_resource_id: {{ .Values.cloudDeploymentId }}
+            cloudProvider: {{ .Values.global.cloudProvider }}
+            cloud_resource_id: {{ .Values.global.cloudDeploymentId }}
             file: '{{ "{{" }} file {{ "}}" }}'
             source: anyscale-operator
         encoding:
