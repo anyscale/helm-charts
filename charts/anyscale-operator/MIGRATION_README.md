@@ -481,7 +481,7 @@ global:
 additionalPatches:
   - kind: Pod
     selector: "app=my-app"
-    patches:
+    patch:
       - op: add
         path: /metadata/annotations/custom
         value: "custom-value"
@@ -490,7 +490,7 @@ additionalPatches:
 patches:
   - kind: Pod
     selector: "app=my-app"
-    patches:
+    patch:
       - op: add
         path: /metadata/annotations/custom
         value: "custom-value"
