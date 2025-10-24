@@ -480,7 +480,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-fe4d6d5d24deb02caa5ea9b60c8e837ac1ca9e05"
+      tag: "ci-fa65a506820a54d547e64f0ea9205b6b0f4f2d3b"
 
     resources:
       requests:
@@ -583,6 +583,9 @@ ingress-nginx:
   enabled: false
 
   controller:
+    # Set the ingress class that this controller should watch
+    ingressClass: anyscale-nginx
+
     service:
       type: LoadBalancer
       # Annotations grouped by cloud provider. Uncomment the ones you need below.
@@ -617,3 +620,7 @@ ingress-nginx:
     ingressClassResource:
       # The name of the ingress class resource to use. Useful to have this set to something other than "nginx" if you want to deploy multiple isolated ingress controllers within the same cluster.
       name: anyscale-nginx
+      # Ensure this is not the default ingress class
+      default: false
+      # Only watch ingresses with this specific class name
+      controllerValue: "k8s.io/anyscale-nginx"
