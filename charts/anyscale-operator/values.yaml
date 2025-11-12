@@ -424,7 +424,7 @@ workloads:
 # Example:
 # patches:
 #   - kind: Pod # The type of the resource to patch.
-#     selector: "my-annotation" in (my-value) # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-based-requirement
+#     selector: "my-annotation in (my-value)" # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-based-requirement
 #     patch: # list of patches RFC-6902 JSON Patch format
 #       - op: add
 #         path: /metadata/annotations/custom-annotation
