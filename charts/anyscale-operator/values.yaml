@@ -104,6 +104,11 @@ workloads:
 
   # Instance types configuration
   instanceTypes:
+    # string, configMap.name, default: "instance-types"
+    # The name of the ConfigMap to store the instance types.
+    configMap:
+      name: "instance-types"
+
     # bool, enableDefaults, default: true
     # Whether to enable default instance types.
     enableDefaults: true
@@ -224,6 +229,11 @@ workloads:
   # Whether to enable Karpenter support.
   # If set to true, the Anyscale Operator will use Karpenter node selectors and tolerations to handle market type.
   enableKarpenterSupport: false
+
+  # bool, enableCrossNamespaceResourceManagement, default: false
+  # Whether to enable cross-namespace resource management.
+  # If set to true, the Anyscale Operator will manage resources across namespaces.
+  enableCrossNamespaceResourceManagement: false
 
   # Market type support
   # nodeSelector, affinity and toleration patches for pods based on market type
@@ -424,7 +434,7 @@ workloads:
 # Example:
 # patches:
 #   - kind: Pod # The type of the resource to patch.
-#     selector: "my-annotation in (my-value)" # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-based-requirement
+#     selector: "my-annotation in (my-value)" # OPTIONAL, an **annotation** selector to filter the resources to patch. See https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-based-requirement
 #     patch: # list of patches RFC-6902 JSON Patch format
 #       - op: add
 #         path: /metadata/annotations/custom-annotation
@@ -480,7 +490,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-fa65a506820a54d547e64f0ea9205b6b0f4f2d3b"
+      tag: "ci-b6257d6a53cbb31a9333768cf9aab4f84f7efd7a"
 
     resources:
       requests:

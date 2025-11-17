@@ -109,6 +109,10 @@ spec:
         - --enable-status-reporting=true
         {{- end }}
         - --operator-version={{ .Chart.Version }}
+        - --instance-types-config-map-name={{ .Values.workloads.instanceTypes.configMap.name | default "instance-types" }}
+        {{- if .Values.workloads.enableCrossNamespaceResourceManagement }}
+        - --enable-cross-namespace-resource-management=true
+        {{- end }}
         resources:
 {{ toYaml .Values.operator.container.resources | indent 10 }}
         env:
