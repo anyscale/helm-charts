@@ -17,3 +17,7 @@ rules:
   - apiGroups: [""]
     resources: ["events", "nodes"]
     verbs: ["get", "watch", "list"]
+{{- if .Values.workloads.enableCrossNamespaceResourceManagement }}
+# If cross-namespace resource management is enabled, we need to grant the cluster role access to all resources in all namespaces.
+{{- include "anyscale-operator.rbac-rules" . }}
+{{- end }}
