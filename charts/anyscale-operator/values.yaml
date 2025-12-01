@@ -13,13 +13,19 @@ global:
   auth:
     # string, iamIdentity
     # The IAM identity to use for the Anyscale Operator.
-    # This is only supported on AWS/GCP. For AWS, this should be the ARN of the IAM role. For GCP, this should be the email of the service account.
+    # For AWS, this should be the ARN of the IAM role.
+    # For GCP, this should be the email of the service account.
+    # For Azure, this should be the client ID of the Azure AD Application associated with the User Assigned Identity.
     # If not set, the Anyscale Operator will use the IAM identity of the Kubernetes node.
     iamIdentity: ""
     # string, anyscaleCliToken
     # The Anyscale CLI token to use for the Anyscale Operator.
     # If not set, the Anyscale Operator will attempt to bootstrap using a native cloud provider identity (only supported on AWS/GCP).
     anyscaleCliToken: ""
+    # string, audience
+    # Required for Azure. This is the audience of the Anyscale Control Plane API.
+    # Example: "api://12345678-1234-1234-1234-123456789012/.default"
+    audience: ""
 
 
   # AWS specific configuration
@@ -234,6 +240,11 @@ workloads:
   # Whether to enable cross-namespace resource management.
   # If set to true, the Anyscale Operator will manage resources across namespaces.
   enableCrossNamespaceResourceManagement: false
+
+  # array, managedNamespaces, default: []
+  # A list of namespaces where the Anyscale Operator's namespace secrets will be copied to.
+  # The operator will periodically copy all secrets from its own namespace to these namespaces.
+  managedNamespaces: []
 
   # Market type support
   # nodeSelector, affinity and toleration patches for pods based on market type
@@ -458,7 +469,6 @@ operator:
   # The number of replicas of the operator.
   replicas: 1
 
-
   # Either nodeSelector or affinity can be specified
   # If both are specified, nodeSelector takes precedence.
 
@@ -490,7 +500,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-b6257d6a53cbb31a9333768cf9aab4f84f7efd7a"
+      tag: "ci-a7c4ba68aa442b017a873acc21795ff5fb66e8ef"
 
     resources:
       requests:
