@@ -33,7 +33,7 @@ spec:
         azure.workload.identity/proxy-sidecar-port: {{ .Values.global.azure.workloadIdentity.proxyPort | default 10000 | quote }}
         {{- end }}
     spec:
-      serviceAccount: {{ .Values.operator.name }}
+      serviceAccountName: anyscale-operator
       {{- if .Values.operator.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.operator.nodeSelector | indent 8 }}
@@ -109,6 +109,9 @@ spec:
         - --enable-status-reporting=true
         {{- end }}
         - --operator-version={{ .Chart.Version }}
+        {{- if .Values.global.auth.audience }}
+        - --auth-audience={{ .Values.global.auth.audience }}
+        {{- end }}
         - --instance-types-config-map-name={{ .Values.workloads.instanceTypes.configMap.name | default "instance-types" }}
         {{- if .Values.workloads.enableCrossNamespaceResourceManagement }}
         - --enable-cross-namespace-resource-management=true
