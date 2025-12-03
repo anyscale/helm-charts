@@ -189,8 +189,8 @@ workloads:
     #       CPU: 8
     #       TPU: 4
     #       memory: 16Gi
-    #     accelerators:
-    #       - TPU-V5E
+    #       accelerators:
+    #         - TPU-V5E
     #     # Hint to Anyscale that this is a single-host deployment.
     #     'anyscale/tpu_hosts': 1
     #     nodeSelector:
@@ -202,8 +202,8 @@ workloads:
     #       CPU: 8
     #       TPU: 4
     #       memory: 16Gi
-    #     accelerators:
-    #       - TPU-V5E
+    #       accelerators:
+    #         - TPU-V5E
     #     # Hint to Anyscale that this is a multi-host deployment,
     #     # and so we need to set the TPU_WORKER_HOSTNAMES envvar
     #     # to link together all of the hosts in this TPU slice.
