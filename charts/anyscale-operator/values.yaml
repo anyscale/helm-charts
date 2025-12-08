@@ -158,6 +158,7 @@ workloads:
     #     memory: <resource-quantity>
     #     GPU: <resource-quantity>
     #     'anyscale/tpu_hosts': <resource-quantity> # Anyscale specific resource for TPU hosts, must be a whole number
+    #     'anyscale/tpu_slices': <resource-quantity> # Anyscale specific resource for TPU slices, must be a whole number
     #     <custom-resource-key>: <resource-quantity> # Any Extended Resource registered in the Kubernetes cluster
     #     # a list of accelerator types
     #     accelerators:
@@ -500,7 +501,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-a7c4ba68aa442b017a873acc21795ff5fb66e8ef"
+      tag: "ci-e7166fb3a00b8e33c4075bced616f8d60e876fc9"
 
     resources:
       requests:
