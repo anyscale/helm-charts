@@ -54,7 +54,7 @@ endpoint_url = {{ .Values.credentialMount.aws.createSecret.endpointUrl }}
       path: /spec/containers/{{ . }}/env/-
       value:
         name: AWS_SDK_LOAD_CONFIG
-        value: 1
+        value: "1"
     - op: add
       path: /spec/containers/{{ . }}/volumeMounts/-
       value:
@@ -86,7 +86,7 @@ endpoint_url = {{ .Values.credentialMount.aws.createSecret.endpointUrl }}
       path: /spec/containers/{{ . }}/env/-
       value:
         name: AWS_SDK_LOAD_CONFIG
-        value: 1
+        value: "1"
     - op: add
       path: /spec/containers/{{ . }}/volumeMounts/-
       value:
