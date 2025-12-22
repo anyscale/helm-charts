@@ -9,6 +9,13 @@ metadata:
     app.kubernetes.io/name: {{ .Chart.Name }}
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    {{- with .Values.operator.deployment.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- with .Values.operator.deployment.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
 spec:
   replicas: {{ .Values.operator.replicas }}
   selector:
@@ -25,6 +32,9 @@ spec:
         azure.workload.identity/use: "true"
         {{- end }}
       annotations:
+        {{- if .Values.global.auth.iamIdentity }}
+        anyscale.com/operator-identity: {{ .Values.global.auth.iamIdentity }}
+        {{- end }}
         {{- with .Values.operator.annotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -33,11 +43,12 @@ spec:
         azure.workload.identity/proxy-sidecar-port: {{ .Values.global.azure.workloadIdentity.proxyPort | default 10000 | quote }}
         {{- end }}
     spec:
-      serviceAccountName: anyscale-operator
+      serviceAccountName: {{ .Values.operator.serviceAccount.name }}
       {{- if .Values.operator.nodeSelector }}
       nodeSelector:
 {{ toYaml .Values.operator.nodeSelector | indent 8 }}
-      {{- else if .Values.operator.affinity }}
+      {{- end }}
+      {{- if .Values.operator.affinity }}
       affinity:
 {{ toYaml .Values.operator.affinity | indent 8 }}
       {{- end }}
@@ -134,6 +145,12 @@ spec:
               name: anyscale-cli-token
               key: ANYSCALE_CLI_TOKEN
         {{- end }}
+        {{- if .Values.credentialMount.gcp.enabled }}
+        - name: GOOGLE_APPLICATION_CREDENTIALS
+          value: {{ printf "%s/key.json" .Values.credentialMount.gcp.fromSecret.operatorMountPath }}
+        - name: GCLOUD_PROJECT
+          value: {{ required "global.gcp.projectId is required for GCP credential mount" .Values.global.gcp.projectId }}
+        {{- end }}
         volumeMounts:
           - name: logs
             mountPath: /tmp/anyscale/logs/
@@ -144,6 +161,11 @@ spec:
           {{- if .Values.credentialMount.aws.enabled }}
           - mountPath: {{ .Values.credentialMount.aws.fromSecret.operatorMountPath }}
             name: aws-creds
+            readOnly: true
+          {{- end }}
+          {{- if .Values.credentialMount.gcp.enabled }}
+          - mountPath: {{ .Values.credentialMount.gcp.fromSecret.operatorMountPath }}
+            name: gcp-creds
             readOnly: true
           {{- end }}
       - name: vector
@@ -199,4 +221,9 @@ spec:
         - name: aws-creds
           secret:
             secretName: {{ .Values.credentialMount.aws.fromSecret.name }}
+        {{- end }}
+        {{- if .Values.credentialMount.gcp.enabled }}
+        - name: gcp-creds
+          secret:
+            secretName: {{ .Values.credentialMount.gcp.fromSecret.name }}
         {{- end }}

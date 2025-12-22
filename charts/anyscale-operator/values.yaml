@@ -41,7 +41,10 @@ global:
       usePathStyle: false
 
   # GCP specific configuration
-  gcp: {}
+  gcp:
+    # string, projectId, default: ""
+    # The project ID of the GCP project. Necessary when `credentialMount.gcp.enabled` is true.
+    projectId: ""
 
   # Azure specific configuration
   azure:
@@ -66,6 +69,10 @@ networking:
     # This is also used for resolving DNS for Anyscale Services.
     # This can be either an IP address or a hostname.
     address: ""
+    # string, classNameOverride, default: ""
+    # If set, this will be the class name of the ingress resource.
+    # By default, the operator will use the class name 'nginx' or '.Values.ingress-nginx.controller.ingressClass' if ingress-nginx is enabled.
+    classNameOverride: ""
 
   # Gateway configuration
   gateway:
@@ -422,6 +429,7 @@ workloads:
         A100-80G: "nvidia-a100-80gb"
         H100: "nvidia-h100-80gb"
         H100-MEGA: "nvidia-h100-mega-80gb"
+        RTX-PRO-6000: "nvidia-rtx-pro-6000"
 
       azure:
         T4: "NVIDIA-T4"
@@ -510,6 +518,8 @@ operator:
       limits:
         memory: 2Gi
 
+  serviceAccount:
+    name: anyscale-operator
   # Vector Sidecar Configuration
   # Vector is a sidecar used to forward telemetry (operator logs/metrics) to the Anyscale Control Plane.
   vector:
@@ -524,6 +534,12 @@ operator:
         memory: 512Mi
       limits:
         memory: 512Mi
+
+  # Deployment configuration.
+  # NOTE: To configure the operator deployment's pod template, use the fields above
+  deployment:
+    annotations: {}
+    labels: {}
 
   config:
     kubernetesClient:
@@ -592,7 +608,23 @@ credentialMount:
       secretAccessKey: ""
       # The endpoint value to be stored in the AWS config file, optional.
       endpointUrl: ""
+  gcp:
+    enabled: false
 
+    fromSecret:
+      # The name of the credential secret
+      name: anyscale-gcp-credentials
+      # The mount path for the GCP credential secret in the Anyscale Operator pod
+      operatorMountPath: /var/secrets
+      # The mount path for the GCP credential secret in the workload pods
+      podMountPath: /var/secrets
+    createSecret:
+      # Whether to create the credential secret. If false, the secret must already exist with the name specified in 'name' above.
+      # and match the format defined in the GCP credential secret template (templates/credentials.yaml)
+      create: false
+
+      # The key json of the GCP credential secret encoded in base64.
+      keyJsonB64: ""
 ################################################################
 # OPTIONAL: NGINX Ingress Controller related values.
 # If enabled, the NGINX Ingress Controller will be installed as
