@@ -243,19 +243,25 @@ data:
           value: {{ .Values.networking.ingress.address }}
     {{- end }}
 
-    {{- /* NGINX Ingress Controller Patches */ -}}
-    {{- if and (index .Values "ingress-nginx" "enabled") (ne (index .Values "ingress-nginx" "controller" "ingressClassResource" "name") "nginx") }}
+    {{- /* Ingress Class Name Patches */ -}}
+    {{- $ingressClassName := "" -}}
+    {{- if .Values.networking.ingress.classNameOverride -}}
+      {{- $ingressClassName = .Values.networking.ingress.classNameOverride -}}
+    {{- else if and (index .Values "ingress-nginx" "enabled") (ne (index .Values "ingress-nginx" "controller" "ingressClassResource" "name") "nginx") -}}
+      {{- $ingressClassName = index .Values "ingress-nginx" "controller" "ingressClassResource" "name" -}}
+    {{- end -}}
+    {{- if $ingressClassName }}
     ########################################
-    # NGINX Ingress Controller Specific Patches
+    # Ingress Class Name Patches
     ########################################
     - kind: Ingress
       patch:
         - op: add
           path: /spec/ingressClassName
-          value: {{ index .Values "ingress-nginx" "controller" "ingressClassResource" "name" }}
+          value: {{ $ingressClassName }}
         - op: add
           path: /metadata/annotations/kubernetes.io~1ingress.class
-          value: {{ index .Values "ingress-nginx" "controller" "ingressClassResource" "name" }}
+          value: {{ $ingressClassName }}
     {{- end }}
 
     {{- /* AWS Credential Secret */ -}}
@@ -264,6 +270,14 @@ data:
     # AWS Credential Secret
     ########################################
     {{- include "anyscale-operator.aws_credential_mount_patch" . | nindent 4 }}
+    {{- end }}
+
+    {{- /* GCP Credential Secret */ -}}
+    {{- if .Values.credentialMount.gcp.enabled }}
+    ########################################
+    # GCP Credential Secret
+    ########################################
+    {{- include "anyscale-operator.gcp_credential_mount_patch" . | nindent 4 }}
     {{- end }}
 
     {{- /* Additional User Patches - Render as-is */ -}}
