@@ -509,7 +509,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-e7166fb3a00b8e33c4075bced616f8d60e876fc9"
+      tag: "ci-88f9457a271596eba81a8681ce0bb9ff3e92a346"
 
     resources:
       requests:
