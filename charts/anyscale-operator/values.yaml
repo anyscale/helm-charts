@@ -151,7 +151,7 @@ workloads:
           memory: 32Gi
           accelerators:
             - T4
-            
+
     # Additional user-defined instance types.
     # If enableDefaults is true, these will be merged with the default instance types.
     # If enableDefaults is false, these will replace the default instance types.
