@@ -132,6 +132,7 @@ workloads:
     # Node selectors and tolerations that apply specifically to these instance types can be
     # placed directly under each instance type under the `nodeSelector` and `tolerations` keys.
     defaults:
+    # CPU only
       2CPU-8GB:
         resources:
           CPU: 2
@@ -144,6 +145,18 @@ workloads:
         resources:
           CPU: 8
           memory: 32Gi
+      16CPU-64GB:
+        resources:
+          CPU: 16
+          memory: 64Gi
+    # T4 Accelerator
+      4CPU-16GB-1xT4:
+        resources:
+          CPU: 4
+          GPU: 1
+          memory: 16Gi
+          accelerators:
+            - T4
       8CPU-32GB-1xT4:
         resources:
           CPU: 8
@@ -151,6 +164,50 @@ workloads:
           memory: 32Gi
           accelerators:
             - T4
+      16CPU-64GB-1xT4:
+        resources:
+          CPU: 16
+          GPU: 1
+          memory: 64Gi
+          accelerators:
+            - T4
+      48CPU-192GB-4xT4:
+        resources:
+          CPU: 48
+          GPU: 4
+          memory: 192Gi
+          accelerators:
+            - T4
+      # L4 Accelerator
+      8CPU-32GB-1xL4:
+        resources:
+          CPU: 8
+          GPU: 1
+          memory: 32Gi
+          accelerators:
+            - L4
+      16CPU-64GB-1xL4:
+        resources:
+          CPU: 16
+          GPU: 1
+          memory: 64Gi
+          accelerators:
+            - L4
+      96CPU-384GB-4xL4:
+        resources:
+          CPU: 96
+          GPU: 4
+          memory: 384Gi
+          accelerators:
+            - L4
+      # A10  Accelerator
+      16CPU-64GB-1xA10G:
+        resources:
+          CPU: 16
+          GPU: 1
+          memory: 64Gi
+          accelerators:
+            - A10G
 
     # Additional user-defined instance types.
     # If enableDefaults is true, these will be merged with the default instance types.
@@ -192,6 +249,13 @@ workloads:
     #         value: example-anyscale
     #         operator: Equal
     #         effect: NoSchedule
+    #   2CPU-8GB-ARM: # Example ARM based instance
+    #     resources:
+    #       CPU: 8
+    #       memory: 8Gi
+    #     cpuArchitecture: "arm64" # Needed for ARM based instance-types
+    #     nodeSelector:
+    #       kubernetes.io/arch: "arm64" # Optional
     #   8CPU-16GB-TPU-V5E-2x2-SINGLEHOST: # Example single-host TPU instance type
     #     resources:
     #       CPU: 8
@@ -509,7 +573,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-88f9457a271596eba81a8681ce0bb9ff3e92a346"
+      tag: "ci-a11604f8f31c73de3b97a6d06c29809fc9468f9d"
 
     resources:
       requests:
