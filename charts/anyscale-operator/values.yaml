@@ -192,6 +192,13 @@ workloads:
     #         value: example-anyscale
     #         operator: Equal
     #         effect: NoSchedule
+    #   2CPU-8GB-ARM: # Example ARM based instance
+    #     resources:
+    #       CPU: 8
+    #       memory: 8Gi
+    #     cpuArchitecture: "arm64" # Needed for ARM based instance-types
+    #     nodeSelector:
+    #       kubernetes.io/arch: "arm64" # Optional
     #   8CPU-16GB-TPU-V5E-2x2-SINGLEHOST: # Example single-host TPU instance type
     #     resources:
     #       CPU: 8
@@ -509,7 +516,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-88f9457a271596eba81a8681ce0bb9ff3e92a346"
+      tag: "ci-a11604f8f31c73de3b97a6d06c29809fc9468f9d"
 
     resources:
       requests:
