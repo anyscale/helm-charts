@@ -287,3 +287,16 @@ data:
     ########################################
 {{ toYaml .Values.patches | indent 4 }}
     {{- end }}
+
+    {{- /* Process Tracing */ -}}
+    {{- if .Values.workloads.enableProcessTracing }}
+    ########################################
+    # Process Tracing
+    ########################################
+    - kind: Pod
+      selector: "anyscale.com/ray-node-type in (head, worker)"
+      patch:
+        - op: add
+          path: /spec/containers/0/securityContext/capabilities/add/-
+          value: "SYS_PTRACE"
+    {{- end }}

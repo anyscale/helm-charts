@@ -25,4 +25,9 @@ The conditional logic for enableCrossNamespaceResourceManagement is handled in t
     resources: ["leases"]
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- end }}
+{{- if or (.Capabilities.APIVersions.Has "kueue.x-k8s.io/v1beta1")}}
+  - apiGroups: ["kueue.x-k8s.io"]
+    resources: ["workloads"]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+{{- end }}
 {{- end }}

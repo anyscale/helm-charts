@@ -256,6 +256,12 @@ workloads:
   # If set to true, the Anyscale Operator will manage resources across namespaces.
   enableCrossNamespaceResourceManagement: false
 
+  # bool, enableProcessTracing, default: true
+  # Whether to enable process tracing.
+  # If set to true, the Anyscale Operator will enable process tracing for workloads.
+  # This is required to profile Ray processes, such as viewing stacktraces and flamegraphs for actors
+  enableProcessTracing: true
+
   # array, managedNamespaces, default: []
   # A list of namespaces where the Anyscale Operator's namespace secrets will be copied to.
   # The operator will periodically copy all secrets from its own namespace to these namespaces.
@@ -516,7 +522,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-a11604f8f31c73de3b97a6d06c29809fc9468f9d"
+      tag: "ci-ee2fead8e0452b9babdc667d8ffbbf05a64701d9"
 
     resources:
       requests:
@@ -615,6 +621,12 @@ credentialMount:
       secretAccessKey: ""
       # The endpoint value to be stored in the AWS config file, optional.
       endpointUrl: ""
+
+      # string, addressing_style, default: ""
+      # The default addressing style to use for S3 URLs.
+      # Allowed values: "path", "virtual"
+      # See: https://docs.aws.amazon.com/cli/latest/topic/s3-config.html#addressing-style
+      addressingStyle: ""
   gcp:
     enabled: false
 
