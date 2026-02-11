@@ -25,6 +25,10 @@ region = {{ .Values.global.region }}
 {{- if .Values.credentialMount.aws.createSecret.endpointUrl }}
 endpoint_url = {{ .Values.credentialMount.aws.createSecret.endpointUrl }}
 {{- end }}
+{{- if .Values.credentialMount.aws.createSecret.addressingStyle }}
+s3 =
+  addressing_style = {{ .Values.credentialMount.aws.createSecret.addressingStyle }}
+{{- end }}
 {{- end }}
 
 {{- define "anyscale-operator.aws_credential_mount_patch" -}}

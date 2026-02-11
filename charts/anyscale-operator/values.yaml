@@ -132,6 +132,7 @@ workloads:
     # Node selectors and tolerations that apply specifically to these instance types can be
     # placed directly under each instance type under the `nodeSelector` and `tolerations` keys.
     defaults:
+    # CPU only
       2CPU-8GB:
         resources:
           CPU: 2
@@ -144,6 +145,18 @@ workloads:
         resources:
           CPU: 8
           memory: 32Gi
+      16CPU-64GB:
+        resources:
+          CPU: 16
+          memory: 64Gi
+    # T4 Accelerator
+      4CPU-16GB-1xT4:
+        resources:
+          CPU: 4
+          GPU: 1
+          memory: 16Gi
+          accelerators:
+            - T4
       8CPU-32GB-1xT4:
         resources:
           CPU: 8
@@ -151,6 +164,50 @@ workloads:
           memory: 32Gi
           accelerators:
             - T4
+      16CPU-64GB-1xT4:
+        resources:
+          CPU: 16
+          GPU: 1
+          memory: 64Gi
+          accelerators:
+            - T4
+      48CPU-192GB-4xT4:
+        resources:
+          CPU: 48
+          GPU: 4
+          memory: 192Gi
+          accelerators:
+            - T4
+      # L4 Accelerator
+      8CPU-32GB-1xL4:
+        resources:
+          CPU: 8
+          GPU: 1
+          memory: 32Gi
+          accelerators:
+            - L4
+      16CPU-64GB-1xL4:
+        resources:
+          CPU: 16
+          GPU: 1
+          memory: 64Gi
+          accelerators:
+            - L4
+      96CPU-384GB-4xL4:
+        resources:
+          CPU: 96
+          GPU: 4
+          memory: 384Gi
+          accelerators:
+            - L4
+      # A10  Accelerator
+      16CPU-64GB-1xA10G:
+        resources:
+          CPU: 16
+          GPU: 1
+          memory: 64Gi
+          accelerators:
+            - A10G
 
     # Additional user-defined instance types.
     # If enableDefaults is true, these will be merged with the default instance types.
@@ -255,6 +312,12 @@ workloads:
   # Whether to enable cross-namespace resource management.
   # If set to true, the Anyscale Operator will manage resources across namespaces.
   enableCrossNamespaceResourceManagement: false
+
+  # bool, enableProcessTracing, default: true
+  # Whether to enable process tracing.
+  # If set to true, the Anyscale Operator will enable process tracing for workloads.
+  # This is required to profile Ray processes, such as viewing stacktraces and flamegraphs for actors
+  enableProcessTracing: true
 
   # array, managedNamespaces, default: []
   # A list of namespaces where the Anyscale Operator's namespace secrets will be copied to.
@@ -516,7 +579,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-a11604f8f31c73de3b97a6d06c29809fc9468f9d"
+      tag: "ci-ee2fead8e0452b9babdc667d8ffbbf05a64701d9"
 
     resources:
       requests:
@@ -615,6 +678,12 @@ credentialMount:
       secretAccessKey: ""
       # The endpoint value to be stored in the AWS config file, optional.
       endpointUrl: ""
+
+      # string, addressing_style, default: ""
+      # The default addressing style to use for S3 URLs.
+      # Allowed values: "path", "virtual"
+      # See: https://docs.aws.amazon.com/cli/latest/topic/s3-config.html#addressing-style
+      addressingStyle: ""
   gcp:
     enabled: false
 
