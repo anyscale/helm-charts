@@ -151,28 +151,6 @@ workloads:
           memory: 32Gi
           accelerators:
             - T4
-      16CPU-64GB-1xT4:
-        resources:
-          CPU: 16
-          GPU: 1
-          memory: 64Gi
-          accelerators:
-            - T4
-      48CPU-192GB-4xT4:
-        resources:
-          CPU: 48
-          GPU: 4
-          memory: 192Gi
-          accelerators:
-            - T4
-      # L4 Accelerator
-      8CPU-32GB-1xL4:
-        resources:
-          CPU: 8
-          GPU: 1
-          memory: 32Gi
-          accelerators:
-            - L4
 
     # Additional user-defined instance types.
     # If enableDefaults is true, these will be merged with the default instance types.
