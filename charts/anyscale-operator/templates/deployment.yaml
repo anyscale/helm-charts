@@ -62,7 +62,13 @@ spec:
       {{- end }}
       containers:
       - name: operator
-        {{- with .Values.operator.container.image }}
+        {{- $operatorImage := "" -}}
+        {{- if .Values.global.azure.extension.enabled -}}
+        {{- $operatorImage = .Values.global.azure.images.operator -}}
+        {{- else -}}
+        {{- $operatorImage = .Values.operator.container.image -}}
+        {{- end -}}
+        {{- with $operatorImage }}
         image: '{{ if .registry }}{{ .registry }}/{{ end }}{{ .image }}:{{ .tag }}'
         {{- end }}
         imagePullPolicy: {{ .Values.operator.container.imagePullPolicy | default "IfNotPresent" }}
@@ -169,7 +175,13 @@ spec:
             readOnly: true
           {{- end }}
       - name: vector
-        {{- with .Values.operator.vector.image }}
+        {{- $vectorImage := "" -}}
+        {{- if .Values.global.azure.extension.enabled -}}
+        {{- $vectorImage = .Values.global.azure.images.vector -}}
+        {{- else -}}
+        {{- $vectorImage = .Values.operator.vector.image -}}
+        {{- end -}}
+        {{- with $vectorImage }}
         image: '{{ if .registry }}{{ .registry }}/{{ end }}{{ .image }}:{{ .tag }}'
         {{- end }}
         imagePullPolicy: {{ .Values.operator.vector.imagePullPolicy | default "IfNotPresent" }}

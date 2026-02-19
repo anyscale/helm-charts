@@ -134,7 +134,7 @@ For advanced usage consult with Anyscale support.
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-ee2fead8e0452b9babdc667d8ffbbf05a64701d9` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-d40a7177ebdade9b4b6c76f54b08c05c8c21d07d` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |

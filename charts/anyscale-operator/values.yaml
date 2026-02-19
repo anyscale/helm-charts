@@ -50,6 +50,17 @@ global:
   azure:
     workloadIdentity:
       proxyPort: 10000
+    extension:
+      enabled: false
+    images:
+      operator:
+          registry: anyscaleoperator-hjaffuace4hxema9.azurecr.io/anyscale
+          image: kubernetes_manager
+          tag: ci-40880d628f4235cb3db1909b001998ec42b6104a
+      vector:
+          registry: anyscaleoperator-hjaffuace4hxema9.azurecr.io/anyscale
+          image: vector
+          tag: 0.40.0-debian
 
 ################################################################
 # Networking and ingress configuration
@@ -522,7 +533,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-ee2fead8e0452b9babdc667d8ffbbf05a64701d9"
+      tag: "ci-d40a7177ebdade9b4b6c76f54b08c05c8c21d07d"
 
     resources:
       requests:
@@ -627,6 +638,10 @@ credentialMount:
       # Allowed values: "path", "virtual"
       # See: https://docs.aws.amazon.com/cli/latest/topic/s3-config.html#addressing-style
       addressingStyle: ""
+
+      # string, signatureVersion, default: ""
+      # The signature version to use for S3 requests.
+      signatureVersion: ""
   gcp:
     enabled: false
 

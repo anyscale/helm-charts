@@ -25,9 +25,14 @@ region = {{ .Values.global.region }}
 {{- if .Values.credentialMount.aws.createSecret.endpointUrl }}
 endpoint_url = {{ .Values.credentialMount.aws.createSecret.endpointUrl }}
 {{- end }}
-{{- if .Values.credentialMount.aws.createSecret.addressingStyle }}
+{{- if or .Values.credentialMount.aws.createSecret.addressingStyle .Values.credentialMount.aws.createSecret.signatureVersion }}
 s3 =
+{{- if .Values.credentialMount.aws.createSecret.addressingStyle }}
   addressing_style = {{ .Values.credentialMount.aws.createSecret.addressingStyle }}
+{{- end }}
+{{- if .Values.credentialMount.aws.createSecret.signatureVersion }}
+  signature_version = {{ .Values.credentialMount.aws.createSecret.signatureVersion }}
+{{- end }}
 {{- end }}
 {{- end }}
 
