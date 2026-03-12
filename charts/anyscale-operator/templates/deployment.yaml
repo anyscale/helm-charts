@@ -133,17 +133,6 @@ spec:
         {{- if .Values.workloads.enableCrossNamespaceResourceManagement }}
         - --enable-cross-namespace-resource-management=true
         {{- end }}
-        {{- if .Values.workloads.kaiScheduler.enabled }}
-        - --enable-stale-podgroup-reaper=true
-        {{- if .Values.workloads.kaiScheduler.stalePodGroupReaper }}
-        {{- if .Values.workloads.kaiScheduler.stalePodGroupReaper.reconcileInterval }}
-        - --stale-podgroup-reaper-reconcile-interval={{ .Values.workloads.kaiScheduler.stalePodGroupReaper.reconcileInterval }}
-        {{- end }}
-        {{- if .Values.workloads.kaiScheduler.stalePodGroupReaper.staleThreshold }}
-        - --stale-podgroup-reaper-stale-threshold={{ .Values.workloads.kaiScheduler.stalePodGroupReaper.staleThreshold }}
-        {{- end }}
-        {{- end }}
-        {{- end }}
         resources:
 {{ toYaml .Values.operator.container.resources | indent 10 }}
         env:
