@@ -54,11 +54,11 @@ global:
       enabled: false
     images:
       operator:
-          registry: anyscaleoperator-hjaffuace4hxema9.azurecr.io/anyscale
+          registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-40880d628f4235cb3db1909b001998ec42b6104a
+          tag: ci-82eed98ca80afce27f5ca137d330c03fe5ea3ca7
       vector:
-          registry: anyscaleoperator-hjaffuace4hxema9.azurecr.io/anyscale
+          registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
           tag: 0.40.0-debian
 
@@ -470,6 +470,25 @@ workloads:
       #   H100: "NVIDIA-H100"
       #   H200: "nvidia-h200-80gb"
 
+  # NVIDIA KAI Scheduler configuration
+  # KAI is an open-source K8s-native GPU scheduler that supports topology-aware
+  # gang scheduling. When enabled, the Anyscale Operator will create PodGroup CRs
+  # for gang-scheduled workloads and apply KAI-specific annotations.
+  kaiScheduler:
+    # bool, enabled, default: false
+    # Whether to enable NVIDIA KAI Scheduler integration.
+    enabled: false
+    # Stale PodGroup reaper configuration.
+    # When KAI is enabled, the operator runs a reaper that garbage-collects
+    # orphaned KAI PodGroup CRs (no pending/running pods, no allocated resources).
+    stalePodGroupReaper:
+      # duration, reconcileInterval, default: 10m
+      # How often to check for stale PodGroups.
+      reconcileInterval: ""
+      # duration, staleThreshold, default: 25h
+      # How long a PodGroup must be orphaned before deletion.
+      staleThreshold: ""
+
 ################################################################
 # Additional patches
 ################################################################
@@ -533,7 +552,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-d40a7177ebdade9b4b6c76f54b08c05c8c21d07d"
+      tag: "ci-82eed98ca80afce27f5ca137d330c03fe5ea3ca7"
 
     resources:
       requests:
