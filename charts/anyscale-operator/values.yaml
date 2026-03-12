@@ -54,11 +54,11 @@ global:
       enabled: false
     images:
       operator:
-          registry: anyscaleoperator-hjaffuace4hxema9.azurecr.io/anyscale
+          registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-40880d628f4235cb3db1909b001998ec42b6104a
+          tag: ci-82eed98ca80afce27f5ca137d330c03fe5ea3ca7
       vector:
-          registry: anyscaleoperator-hjaffuace4hxema9.azurecr.io/anyscale
+          registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
           tag: 0.40.0-debian
 
@@ -533,7 +533,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-d40a7177ebdade9b4b6c76f54b08c05c8c21d07d"
+      tag: "ci-82eed98ca80afce27f5ca137d330c03fe5ea3ca7"
 
     resources:
       requests:
