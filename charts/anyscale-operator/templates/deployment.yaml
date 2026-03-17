@@ -102,9 +102,13 @@ spec:
         {{- if .Values.networking.gateway.enabled }}
         - --enable-gateway=true
         - --gateway-name={{ .Values.networking.gateway.name }}
+        - --gateway-namespace={{ .Values.networking.gateway.namespace }}
         - --gateway-hostname={{ .Values.networking.gateway.hostname }}
         - --gateway-ip={{ .Values.networking.gateway.ip }}
         - --gateway-api-version={{ .Values.networking.gateway.apiVersion }}
+        {{- if .Values.networking.gateway.serviceAuthFallbackEnabled }}
+        - --service-auth-fallback-enabled=true
+        {{- end }}
         {{- end }}
         - --system-logs-ingress-proxy-port=3100
         - --system-metrics-ingress-proxy-port=3101
@@ -132,6 +136,17 @@ spec:
         - --instance-types-config-map-name={{ .Values.workloads.instanceTypes.configMap.name | default "instance-types" }}
         {{- if .Values.workloads.enableCrossNamespaceResourceManagement }}
         - --enable-cross-namespace-resource-management=true
+        {{- end }}
+        {{- if .Values.workloads.kaiScheduler.enabled }}
+        - --enable-stale-podgroup-reaper=true
+        {{- if .Values.workloads.kaiScheduler.stalePodGroupReaper }}
+        {{- if .Values.workloads.kaiScheduler.stalePodGroupReaper.reconcileInterval }}
+        - --stale-podgroup-reaper-reconcile-interval={{ .Values.workloads.kaiScheduler.stalePodGroupReaper.reconcileInterval }}
+        {{- end }}
+        {{- if .Values.workloads.kaiScheduler.stalePodGroupReaper.staleThreshold }}
+        - --stale-podgroup-reaper-stale-threshold={{ .Values.workloads.kaiScheduler.stalePodGroupReaper.staleThreshold }}
+        {{- end }}
+        {{- end }}
         {{- end }}
         resources:
 {{ toYaml .Values.operator.container.resources | indent 10 }}
