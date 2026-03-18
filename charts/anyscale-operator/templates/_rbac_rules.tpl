@@ -34,12 +34,4 @@ The conditional logic for enableCrossNamespaceResourceManagement is handled in t
     resources: ["workloads"]
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- end }}
-{{- if .Values.workloads.kaiScheduler.enabled }}
-  - apiGroups: ["scheduling.run.ai"]
-    resources: ["podgroups"]
-    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
-  - apiGroups: ["kai.scheduler"]
-    resources: ["topologies"]
-    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
-{{- end }}
 {{- end }}

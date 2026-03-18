@@ -480,25 +480,6 @@ workloads:
       #   H100: "NVIDIA-H100"
       #   H200: "nvidia-h200-80gb"
 
-  # NVIDIA KAI Scheduler configuration
-  # KAI is an open-source K8s-native GPU scheduler that supports topology-aware
-  # gang scheduling. When enabled, the Anyscale Operator will create PodGroup CRs
-  # for gang-scheduled workloads and apply KAI-specific annotations.
-  kaiScheduler:
-    # bool, enabled, default: false
-    # Whether to enable NVIDIA KAI Scheduler integration.
-    enabled: false
-    # Stale PodGroup reaper configuration.
-    # When KAI is enabled, the operator runs a reaper that garbage-collects
-    # orphaned KAI PodGroup CRs (no pending/running pods, no allocated resources).
-    stalePodGroupReaper:
-      # duration, reconcileInterval, default: 10m
-      # How often to check for stale PodGroups.
-      reconcileInterval: ""
-      # duration, staleThreshold, default: 25h
-      # How long a PodGroup must be orphaned before deletion.
-      staleThreshold: ""
-
 ################################################################
 # Additional patches
 ################################################################
