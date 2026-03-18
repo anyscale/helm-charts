@@ -14,11 +14,15 @@ The conditional logic for enableCrossNamespaceResourceManagement is handled in t
 {{- if eq .Values.networking.gateway.apiVersion "networking.istio.io/v1alpha3" }}
   - apiGroups: ["networking.istio.io"]
     resources: ["virtualservices"]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- else }}
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["httproutes"]
-{{- end }}
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["referencegrants"]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+{{- end }}
 {{- end }}
 {{- if gt (int .Values.operator.replicas) 1 }}
   - apiGroups: ["coordination.k8s.io"]
@@ -28,6 +32,14 @@ The conditional logic for enableCrossNamespaceResourceManagement is handled in t
 {{- if or (.Capabilities.APIVersions.Has "kueue.x-k8s.io/v1beta1")}}
   - apiGroups: ["kueue.x-k8s.io"]
     resources: ["workloads"]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+{{- end }}
+{{- if .Values.workloads.kaiScheduler.enabled }}
+  - apiGroups: ["scheduling.run.ai"]
+    resources: ["podgroups"]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["kai.scheduler"]
+    resources: ["topologies"]
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- end }}
 {{- end }}
