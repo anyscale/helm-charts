@@ -14,11 +14,15 @@ The conditional logic for enableCrossNamespaceResourceManagement is handled in t
 {{- if eq .Values.networking.gateway.apiVersion "networking.istio.io/v1alpha3" }}
   - apiGroups: ["networking.istio.io"]
     resources: ["virtualservices"]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- else }}
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["httproutes"]
-{{- end }}
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["referencegrants"]
+    verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
+{{- end }}
 {{- end }}
 {{- if gt (int .Values.operator.replicas) 1 }}
   - apiGroups: ["coordination.k8s.io"]
