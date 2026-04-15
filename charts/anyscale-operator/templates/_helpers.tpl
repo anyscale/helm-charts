@@ -9,6 +9,37 @@ Validate controlPlaneURL to ensure it doesn't end with a trailing slash
 {{- $url -}}
 {{- end -}}
 
+{{- define "anyscale-operator.usePathStyle" -}}
+{{- if or .Values.global.aws.s3.usePathStyle (eq (.Values.credentialMount.aws.createSecret.addressingStyle | default "") "path") -}}true{{- end -}}
+{{- end -}}
+
+{{- define "anyscale-operator.aws_specific_patches" -}}
+{{- $headContainerIndices := list 0 1 2 5 -}}{{/* ray, vector, anyscaled, activity-probe */}}
+{{- $workerContainerIndices := list 0 1 2 3 -}}{{/* ray, vector, anyscaled, activity-probe */}}
+{{- if include "anyscale-operator.usePathStyle" $ }}
+- kind: Pod
+  selector: "anyscale.com/ray-node-type in (head)"
+  patch:
+    {{- range $headContainerIndices }}
+    - op: add
+      path: /spec/containers/{{ . }}/env/-
+      value:
+        name: ANYSCALE_S3_USE_PATH_STYLE
+        value: "true"
+    {{- end }}
+- kind: Pod
+  selector: "anyscale.com/ray-node-type in (worker)"
+  patch:
+    {{- range $workerContainerIndices }}
+    - op: add
+      path: /spec/containers/{{ . }}/env/-
+      value:
+        name: ANYSCALE_S3_USE_PATH_STYLE
+        value: "true"
+    {{- end }}
+{{- end }}
+{{- end }}
+
 {{- define "anyscale-operator.aws_credentials" -}}
 [default]
 aws_access_key_id = {{ required "A valid .Values.credentialMount.aws.createSecret.accessKeyId is required if .Values.credentialMount.aws.createSecret.create is true" .Values.credentialMount.aws.createSecret.accessKeyId }}

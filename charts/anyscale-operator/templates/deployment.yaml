@@ -140,7 +140,7 @@ spec:
         resources:
 {{ toYaml .Values.operator.container.resources | indent 10 }}
         env:
-        {{- if .Values.global.aws.s3.usePathStyle }}
+        {{- if include "anyscale-operator.usePathStyle" . }}
         - name: ANYSCALE_S3_USE_PATH_STYLE
           value: "true"
         {{- end }}
