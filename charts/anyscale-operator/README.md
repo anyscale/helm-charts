@@ -134,7 +134,7 @@ For advanced usage consult with Anyscale support.
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-1c50ff468e55cdf634c7153455d6c0f02550c952` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-268c63e5e7283355876c20a6a4bfad93fa4e736a` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |
@@ -194,4 +194,4 @@ For advanced usage consult with Anyscale support.
 
 ## Installation
 
-For detailed installation instructions, please refer to the [Anyscale Operator Documentation](https://docs.anyscale.com/administration/cloud-deployment/kubernetes/).
+For detailed installation instructions, please refer to the [Anyscale Operator Documentation](https://docs.anyscale.com/admin/cloud/kubernetes).

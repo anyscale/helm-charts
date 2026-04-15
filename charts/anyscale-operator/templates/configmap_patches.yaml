@@ -264,6 +264,14 @@ data:
           value: {{ $ingressClassName }}
     {{- end }}
 
+    {{- /* AWS-Specific Patches */ -}}
+    {{- if eq .Values.global.cloudProvider "aws" }}
+    ########################################
+    # AWS-Specific Patches
+    ########################################
+    {{- include "anyscale-operator.aws_specific_patches" . | nindent 4 }}
+    {{- end }}
+
     {{- /* AWS Credential Secret */ -}}
     {{- if .Values.credentialMount.aws.enabled }}
     ########################################
