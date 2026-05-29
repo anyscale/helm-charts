@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-268c63e5e7283355876c20a6a4bfad93fa4e736a
+          tag: ci-5359115947981c7c16f18823af86ba6ec6e2e580
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
@@ -530,6 +530,12 @@ operator:
   # tolerations allow the operator pod to schedule on nodes with matching taints
   tolerations: []
 
+  # map, securityContext, default: {}
+  # Pod-level securityContext applied verbatim to the operator pod template.
+  # Set runAsNonRoot/runAsUser/runAsGroup/fsGroup/fsGroupChangePolicy here to
+  # run the operator pod as a non-root user. Leave empty for default (root).
+  securityContext: {}
+
   # map, labels, default: {}
   # The labels to use for the operator pods.
   labels: {}
@@ -543,7 +549,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-268c63e5e7283355876c20a6a4bfad93fa4e736a"
+      tag: "ci-5359115947981c7c16f18823af86ba6ec6e2e580"
 
     resources:
       requests:
