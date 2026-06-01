@@ -56,6 +56,10 @@ spec:
       tolerations:
 {{ toYaml .Values.operator.tolerations | indent 8 }}
       {{- end }}
+      {{- with .Values.operator.securityContext }}
+      securityContext:
+{{ toYaml . | indent 8 }}
+      {{- end }}
       {{- if .Values.operator.imagePullSecrets }}
       imagePullSecrets:
 {{ toYaml .Values.operator.imagePullSecrets | indent 8 }}
@@ -164,6 +168,10 @@ spec:
         volumeMounts:
           - name: logs
             mountPath: /tmp/anyscale/logs/
+          {{- with .Values.operator.securityContext }}
+          - name: anyscale-sockets
+            mountPath: /tmp/anyscale/sockets/
+          {{- end }}
           - name: patches
             mountPath: /tmp/config
           - name: vector-config
@@ -220,6 +228,10 @@ spec:
       volumes:
         - name: logs
           emptyDir: {}
+        {{- with .Values.operator.securityContext }}
+        - name: anyscale-sockets
+          emptyDir: {}
+        {{- end }}
         - name: patches
           configMap:
             name: patches
