@@ -73,6 +73,7 @@ For advanced usage consult with Anyscale support.
 | `workloads.instanceTypes.enableDefaults` | bool | `true` | Whether to enable default instance types provided by the chart |
 | `workloads.instanceTypes.defaults` | object | See values.yaml | Default instance types (2CPU-8GB, 4CPU-16GB, 8CPU-32GB, 8CPU-32GB-1xT4). These provide Pod shapes that can be used in Anyscale workloads. |
 | `workloads.instanceTypes.additional` | object | `{}` | Additional user-defined instance types. If `enableDefaults` is true, these merge with defaults. If false, these replace defaults. See values.yaml for schema and examples. |
+| `workloads.instanceTypes.validationHook.enabled` | bool | `true` | Run the pre-install/pre-upgrade Helm hook that validates the instance-types ConfigMap against the Anyscale Control Plane before the release is applied. Set to `false` to skip this pre-flight check (e.g. when the Control Plane is not reachable from the cluster at install time). Does not affect the runtime validating webhook, which still validates instance-types ConfigMap changes. |
 
 #### Workload Features
 
@@ -134,7 +135,7 @@ For advanced usage consult with Anyscale support.
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-5359115947981c7c16f18823af86ba6ec6e2e580` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-2c43cde542a2c6e856c6e49bc99812d7d2f78e17` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |
@@ -155,7 +156,7 @@ For advanced usage consult with Anyscale support.
 | `operator.config.unscheduledPodReaper.reconcileInterval` | duration | `"1m"` | Interval at which the unscheduled pod reaper should reconcile |
 | `operator.config.unscheduledPodReaper.terminationThreshold` | duration | `"10m"` | Threshold after which an unscheduled Pod should be considered leaked and terminated |
 | `operator.config.status.reportingEnabled` | bool | `true` | Whether to enable status reporting to the Anyscale Control Plane |
-| `operator.config.status.excludeComponentVerification` | array | `[]` | Components to skip verification for during startup and status checks. Valid values: STORAGE_BUCKET, KUBERNETES_VERSION, GATEWAY_RESOURCES, CLOUD_RESOURCES, IAM_IDENTITY, KUBERNETES_PERMISSIONS |
+| `operator.config.status.excludeComponentVerification` | array | `[]` | Components to skip verification for during startup and status checks. Valid values: STORAGE_BUCKET, KUBERNETES_VERSION, GATEWAY_RESOURCES, CLOUD_RESOURCES, IAM_IDENTITY, KUBERNETES_PERMISSIONS, INSTANCE_TYPES. INSTANCE_TYPES is auto-appended by the chart when no instance types are defined. |
 | `operator.config.status.checkInterval` | duration | `"5m"` | Interval for status checks |
 | `operator.config.status.reportInterval` | duration | `"30s"` | Interval for status reporting |
 

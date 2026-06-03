@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-5359115947981c7c16f18823af86ba6ec6e2e580
+          tag: ci-2c43cde542a2c6e856c6e49bc99812d7d2f78e17
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
@@ -142,6 +142,17 @@ workloads:
     # The name of the ConfigMap to store the instance types.
     configMap:
       name: "instance-types"
+
+    # Instance-type validation hook
+    validationHook:
+      # bool, enabled, default: true
+      # Whether to run the pre-install/pre-upgrade Helm hook that validates the
+      # instance-types ConfigMap against the Anyscale Control Plane before the
+      # release is applied. The hook POSTs the planned ConfigMap to the same
+      # admission endpoint as the runtime ValidatingWebhookConfiguration, so an
+      # invalid configuration fails `helm install`/`helm upgrade` up front
+      # instead of being caught later on the next reconfigure.
+      enabled: true
 
     # bool, enableDefaults, default: true
     # Whether to enable default instance types.
@@ -549,7 +560,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-5359115947981c7c16f18823af86ba6ec6e2e580"
+      tag: "ci-2c43cde542a2c6e856c6e49bc99812d7d2f78e17"
 
     resources:
       requests:
@@ -614,8 +625,12 @@ operator:
       #  - CLOUD_RESOURCES
       #  - IAM_IDENTITY
       #  - KUBERNETES_PERMISSIONS
+      #  - INSTANCE_TYPES
       #
       # By default, all components will be verified during the operator startup sequence.
+      # Note: INSTANCE_TYPES is automatically appended by the chart when no instance
+      # types are defined (workloads.instanceTypes.enableDefaults=false with no additional
+      # entries), since the instance-types ConfigMap is also skipped in that case.
       excludeComponentVerification: []
       checkInterval: "5m"
       reportInterval: "30s"
