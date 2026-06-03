@@ -1,11 +1,5 @@
-{{- $allInstanceTypes := dict }}
-{{- if .Values.workloads.instanceTypes.enableDefaults }}
-  {{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.defaults) }}
-{{- end }}
-{{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.additional) }}
-
-{{- /* Only render the ConfigMap if there are instance types defined. This allows users to disable default instance types without additional configuration. */ -}}
-{{- if $allInstanceTypes }}
+{{- /* Only render the ConfigMap if there are instance types defined. This allows users to disable default instance types without additional configuration. The deployment template uses the same helper to decide whether to skip the instance-types validator check. */ -}}
+{{- if include "anyscale-operator.hasInstanceTypes" . }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -20,5 +14,5 @@ metadata:
 data:
   version: v1
   instance_types.yaml: |-
-{{ toYaml $allInstanceTypes | indent 4 }}
+{{ include "anyscale-operator.mergedInstanceTypes" . | indent 4 }}
 {{- end }}

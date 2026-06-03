@@ -13,6 +13,34 @@ Validate controlPlaneURL to ensure it doesn't end with a trailing slash
 {{- if or .Values.global.aws.s3.usePathStyle (eq (.Values.credentialMount.aws.createSecret.addressingStyle | default "") "path") -}}true{{- end -}}
 {{- end -}}
 
+{{/*
+Returns the merged workload instance types (defaults + additional) as YAML.
+This is the single source of truth for what lands in the instance-types
+ConfigMap; the ConfigMap template, the pre-install validation hook, and the
+hasInstanceTypes gate all MUST consume this helper so they never disagree
+about what is being deployed.
+*/}}
+{{- define "anyscale-operator.mergedInstanceTypes" -}}
+{{- $allInstanceTypes := dict -}}
+{{- if .Values.workloads.instanceTypes.enableDefaults -}}
+  {{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.defaults) -}}
+{{- end -}}
+{{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.additional) -}}
+{{- $allInstanceTypes | toYaml -}}
+{{- end -}}
+
+{{/*
+Returns the truthy string "true" when at least one workload instance type
+will be rendered into the instance-types ConfigMap, otherwise empty. The
+ConfigMap (configmap_instance_types.yaml) and the operator's instance-types
+validator (deployment.yaml --exclude-component-verification) MUST agree, so
+both consume this helper.
+*/}}
+{{- define "anyscale-operator.hasInstanceTypes" -}}
+{{- $merged := fromYaml (include "anyscale-operator.mergedInstanceTypes" .) -}}
+{{- if $merged -}}true{{- end -}}
+{{- end -}}
+
 {{- define "anyscale-operator.aws_specific_patches" -}}
 {{- $headContainerIndices := list 0 1 2 5 -}}{{/* ray, vector, anyscaled, activity-probe */}}
 {{- $workerContainerIndices := list 0 1 2 3 -}}{{/* ray, vector, anyscaled, activity-probe */}}
