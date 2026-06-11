@@ -1,11 +1,14 @@
 # Kueue Preemption Demo (anyscale-operator namespace)
 
-Demonstrates **priority-based preemption** in a single Kueue `ClusterQueue`.
-A low-priority "Ray cluster" occupies the entire queue quota; submitting a
-high-priority one forces Kueue to **preempt** (evict) the low-priority workload.
+Demonstrates a **high-priority Anyscale job preempting a low-priority one**
+using [Kueue](https://kueue.sigs.k8s.io/). A low-priority Anyscale job is
+running and occupying all available quota; when a high-priority job is
+submitted and there is no room for it, Kueue **preempts** (evicts) the
+low-priority job to admit the high-priority one. The low-priority job's pods
+are deleted and it goes back to waiting in the queue.
 
-This folder contains **only the Kueue resources**. You create the Ray
-workloads yourself (see "Workload contract" below).
+This folder contains the Kueue resources plus the Anyscale compute config and
+job definitions to reproduce the scenario (see "Anyscale workload yamls" below).
 
 ## Workload shape
 
