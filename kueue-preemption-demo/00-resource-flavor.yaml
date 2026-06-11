@@ -1,0 +1,6 @@
+# ResourceFlavor: a single, undifferentiated flavor that matches any node.
+# For a real demo you can pin it to specific nodes via nodeLabels/tolerations.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ResourceFlavor
+metadata:
+  name: default-flavor

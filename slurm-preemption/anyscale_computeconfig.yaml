@@ -1,0 +1,27 @@
+cloud: hdeng-demo-nebius
+head_node:
+  instance_type: 8CPU-32GB
+  resources:
+    CPU: 0
+    GPU: 0
+  flags: {}
+  advanced_instance_config:
+    spec:
+      priorityClassName: anyscale-high
+worker_nodes:
+  - instance_type: 8CPU-32GB
+    flags: {}
+    min_nodes: 1
+    max_nodes: 1
+    market_type: ON_DEMAND
+    advanced_instance_config:
+      spec:
+        priorityClassName: anyscale-high
+enable_cross_zone_scaling: false
+auto_select_worker_config: false
+flags:
+  cloud_resource_strategy: availability
+  allow-cross-zone-autoscaling: false
+advanced_instance_config:
+  spec:
+    priorityClassName: anyscale-high

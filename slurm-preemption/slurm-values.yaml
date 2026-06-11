@@ -1,0 +1,25 @@
+# Overrides for the slurm chart (oci://ghcr.io/slinkyproject/charts/slurm) to
+# make the worker nodeset preemptible by kube-scheduler priority preemption:
+#
+#   helm upgrade slurm oci://ghcr.io/slinkyproject/charts/slurm \
+#     --version 1.1.0 -n slurm -f slurm-values.yaml
+#
+# 1. priorityClassName: slurm-low — below default priority 0, so higher-priority
+#    pods (e.g. Anyscale with anyscale-high) can evict the worker.
+# 2. Real resource requests on slurmd — the scheduler only picks preemption
+#    victims whose eviction frees requested resources; a zero-request pod is
+#    never selected (and oversubscribes nodes). Sized to 12 CPU / 48Gi on a
+#    15.9-CPU / ~62Gi-allocatable node, so an 8CPU-32GB Anyscale pod cannot
+#    fit alongside it and preemption must fire.
+#
+# Only the worker nodeset gets the low priority class; controller/restapi/etc.
+# keep the default so they are not preemption candidates.
+nodesets:
+  slinky:
+    slurmd:
+      resources:
+        requests:
+          cpu: 12
+          memory: 48Gi
+    podSpec:
+      priorityClassName: slurm-low

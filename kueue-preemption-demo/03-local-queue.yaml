@@ -1,0 +1,9 @@
+# LocalQueue is the namespaced entry point that pods reference via the
+# kueue.x-k8s.io/queue-name label. It points at the cluster-scoped ClusterQueue.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: LocalQueue
+metadata:
+  name: anyscale-lq
+  namespace: anyscale-operator
+spec:
+  clusterQueue: anyscale-cq

@@ -1,0 +1,23 @@
+# ClusterQueue holds the quota. It is intentionally sized to fit EXACTLY ONE
+# Ray workload (head 8 CPU + worker 8 CPU = 16 CPU; 2 x 32Gi = 64Gi).
+# Because a second workload cannot fit, Kueue must preempt to admit it.
+apiVersion: kueue.x-k8s.io/v1beta1
+kind: ClusterQueue
+metadata:
+  name: anyscale-cq
+spec:
+  namespaceSelector: {}            # accept LocalQueues from any namespace
+  preemption:
+    # Within this ClusterQueue, a higher-priority workload preempts lower-priority ones.
+    withinClusterQueue: LowerPriority
+    # No cohort here, so cross-queue reclaim is irrelevant.
+    reclaimWithinCohort: Never
+  resourceGroups:
+  - coveredResources: ["cpu", "memory"]
+    flavors:
+    - name: default-flavor
+      resources:
+      - name: cpu
+        nominalQuota: "16"         # one workload's worth of CPU
+      - name: memory
+        nominalQuota: 64Gi         # one workload's worth of memory

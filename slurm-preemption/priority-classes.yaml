@@ -1,0 +1,25 @@
+# Kubernetes PriorityClasses (NOT Kueue WorkloadPriorityClasses — these affect
+# kube-scheduler preemption at the node level).
+#
+# slurm-low (-100): below the default priority 0, so virtually any pod that
+# needs room can preempt a Slurm worker. preemptionPolicy: Never means Slurm
+# workers never evict anyone else when they schedule — pure scavenger semantics.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: slurm-low
+value: -100
+preemptionPolicy: Never
+globalDefault: false
+description: "Slurm worker nodesets. Scavenges idle capacity; preempted by anything higher."
+---
+# anyscale-high (1000): above both the default 0 and slurm-low, so when an
+# Anyscale pod cannot fit, kube-scheduler evicts Slurm workers to make room.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: anyscale-high
+value: 1000
+preemptionPolicy: PreemptLowerPriority
+globalDefault: false
+description: "Anyscale workloads. Preempts slurm-low (and default-priority) pods when needed."
