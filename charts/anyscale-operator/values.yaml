@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-2c43cde542a2c6e856c6e49bc99812d7d2f78e17
+          tag: ci-a079880ab66977d1b954cad5cd8ecadf4bba4ea8
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
@@ -560,7 +560,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-2c43cde542a2c6e856c6e49bc99812d7d2f78e17"
+      tag: "ci-a079880ab66977d1b954cad5cd8ecadf4bba4ea8"
 
     resources:
       requests:
