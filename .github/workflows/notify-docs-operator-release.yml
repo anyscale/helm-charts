@@ -1,0 +1,65 @@
+name: Notify docs of operator release
+
+# Best-effort, non-blocking notification. When a new anyscale-operator chart
+# version lands on master (the same push that triggers the chart-releaser
+# workflow), tell the Anyscale documentation repo so it can draft the release
+# notes. This runs as a separate workflow and is allowed to fail, so it can
+# never block or affect the chart release.
+#
+# Why this trigger and not `release: published`: the chart-releaser workflow
+# creates releases with the default GITHUB_TOKEN, and releases created that way
+# do not trigger other workflows (GitHub's recursion guard). The version-bump
+# push to master is a real user event, so it fires reliably.
+#
+# Requires a repository secret DOCS_DISPATCH_GH_TOKEN: a token that can create a
+# repository_dispatch on anyscale/docs (Contents: write on that repo). Until the
+# secret is set, this workflow no-ops gracefully.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'charts/anyscale-operator/Chart.yaml'
+
+jobs:
+  notify-docs:
+    runs-on: ubuntu-latest
+    # Best-effort: a docs-side failure must not turn the release red.
+    continue-on-error: true
+    steps:
+      - name: Check out the chart
+        uses: actions/checkout@v4
+
+      - name: Notify anyscale/docs of the operator release
+        env:
+          DOCS_DISPATCH_GH_TOKEN: ${{ secrets.DOCS_DISPATCH_GH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          CHART=charts/anyscale-operator/Chart.yaml
+          VERSION=$(grep -E '^version:' "$CHART" | head -1 | awk '{print $2}' | tr -d '"')
+          if [ -z "${VERSION:-}" ]; then
+            echo "Could not read the chart version from ${CHART}; skipping."
+            exit 0
+          fi
+
+          if [ -z "${DOCS_DISPATCH_GH_TOKEN:-}" ]; then
+            echo "DOCS_DISPATCH_GH_TOKEN is not configured; skipping notification (best-effort)."
+            exit 0
+          fi
+
+          TAG="anyscale-operator-${VERSION}"
+          RELEASE_URL="https://github.com/anyscale/helm-charts/releases/tag/${TAG}"
+          PAYLOAD=$(jq -n \
+            --arg version "$VERSION" --arg tag "$TAG" --arg url "$RELEASE_URL" \
+            '{"event_type": "operator-release", "client_payload": {"version": $version, "tag": $tag, "release_url": $url}}')
+
+          # A duplicate notification is harmless: the docs receiver is idempotent
+          # on the version, so it won't create a second ticket.
+          curl -f -S -X POST \
+            -H "Authorization: token ${DOCS_DISPATCH_GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "Content-Type: application/json" \
+            https://api.github.com/repos/anyscale/docs/dispatches \
+            -d "${PAYLOAD}"
+          echo "Notified anyscale/docs of operator ${VERSION}."
