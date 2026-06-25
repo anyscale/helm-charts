@@ -20,6 +20,14 @@ on:
     branches: [master]
     paths:
       - 'charts/anyscale-operator/Chart.yaml'
+  # Manual trigger for testing the round-trip without a real release. Provide a
+  # throwaway version like 0.0.0-test; the docs receiver dedupes on the version.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Operator version to notify docs about (defaults to the current Chart.yaml version)."
+        required: false
+        type: string
 
 jobs:
   notify-docs:
@@ -33,13 +41,18 @@ jobs:
       - name: Notify anyscale/docs of the operator release
         env:
           DOCS_DISPATCH_GH_TOKEN: ${{ secrets.DOCS_DISPATCH_GH_TOKEN }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
 
           CHART=charts/anyscale-operator/Chart.yaml
-          VERSION=$(grep -E '^version:' "$CHART" | head -1 | awk '{print $2}' | tr -d '"')
+          # Use the manually supplied version if present, else read the chart.
+          VERSION="${INPUT_VERSION:-}"
+          if [ -z "$VERSION" ]; then
+            VERSION=$(grep -E '^version:' "$CHART" | head -1 | awk '{print $2}' | tr -d '"')
+          fi
           if [ -z "${VERSION:-}" ]; then
-            echo "Could not read the chart version from ${CHART}; skipping."
+            echo "Could not determine the chart version; skipping."
             exit 0
           fi
 
