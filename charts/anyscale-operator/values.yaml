@@ -27,6 +27,21 @@ global:
     # Example: "api://12345678-1234-1234-1234-123456789012/.default"
     audience: ""
 
+  # HTTP(S) proxy configuration
+  # If set, these values are injected as HTTP_PROXY/HTTPS_PROXY/NO_PROXY
+  # (and their lower-case equivalents) environment variables into all
+  # containers of the Anyscale Operator deployment.
+  proxy:
+    # string, httpProxy, default: ""
+    # The proxy URL for HTTP traffic, e.g. "http://proxy.example.com:3128"
+    httpProxy: ""
+    # string, httpsProxy, default: ""
+    # The proxy URL for HTTPS traffic, e.g. "http://proxy.example.com:3128"
+    httpsProxy: ""
+    # string, noProxy, default: ""
+    # Comma-separated list of hosts, domains, and CIDRs that should bypass the
+    # proxy, e.g. "localhost,127.0.0.1,10.0.0.0/8,.svc,.cluster.local"
+    noProxy: ""
 
   # AWS specific configuration
   aws:
