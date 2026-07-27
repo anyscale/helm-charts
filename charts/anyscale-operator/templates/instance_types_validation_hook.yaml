@@ -116,6 +116,10 @@ spec:
         - --control-plane-url={{ include "anyscale-operator.validateControlPlaneURL" . }}
         - --cloud-deployment-id={{ required "global.cloudDeploymentId is required" .Values.global.cloudDeploymentId }}
         - --admission-review-file=/admission/admission-review.json
+        {{- with .Values.operator.container.additionalEnv }}
+        env:
+{{ toYaml . | indent 8 }}
+        {{- end }}
         volumeMounts:
         - name: admission-review
           mountPath: /admission

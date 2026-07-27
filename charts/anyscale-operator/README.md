@@ -135,16 +135,18 @@ For advanced usage consult with Anyscale support.
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-a079880ab66977d1b954cad5cd8ecadf4bba4ea8` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-00e6d0075d63c550082ad6856abddf8adb96e7bd` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |
+| `operator.container.additionalEnv` | array | `[]` | Extra env vars appended to the operator container (standard k8s `env` schema: name/value or name/valueFrom), after the built-in env vars, so a colliding name overrides the built-in. Also applied to the pre-install/pre-upgrade instance-types validation hook, which runs the operator image and calls the control plane, so proxy settings take effect during `helm install`/`upgrade` too. For pod-wide env such as an HTTP proxy (HTTP_PROXY/HTTPS_PROXY/NO_PROXY), also set `operator.vector.additionalEnv`. |
 | `operator.vector.image.registry` | string | `""` | Vector sidecar image registry (empty string uses default docker.io) |
 | `operator.vector.image.image` | string | `"timberio/vector"` | Vector sidecar image name |
 | `operator.vector.image.tag` | string | `"0.40.0-debian"` | Vector sidecar image tag |
 | `operator.vector.resources.requests.cpu` | string | `"100m"` | Vector sidecar CPU request |
 | `operator.vector.resources.requests.memory` | string | `"512Mi"` | Vector sidecar memory request |
 | `operator.vector.resources.limits.memory` | string | `"512Mi"` | Vector sidecar memory limit |
+| `operator.vector.additionalEnv` | array | `[]` | Extra env vars appended to the vector sidecar (same schema as `operator.container.additionalEnv`). Set both for env every container in the pod must share. |
 
 #### Operator Configuration
 
