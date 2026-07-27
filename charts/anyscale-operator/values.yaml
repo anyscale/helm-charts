@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-a079880ab66977d1b954cad5cd8ecadf4bba4ea8
+          tag: ci-00e6d0075d63c550082ad6856abddf8adb96e7bd
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
@@ -560,7 +560,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-a079880ab66977d1b954cad5cd8ecadf4bba4ea8"
+      tag: "ci-00e6d0075d63c550082ad6856abddf8adb96e7bd"
 
     resources:
       requests:
@@ -568,6 +568,17 @@ operator:
         cpu: 1
       limits:
         memory: 2Gi
+
+    # array, additionalEnv, default: []
+    # Extra environment variables to add to the operator container, using the
+    # standard Kubernetes env schema (name/value or name/valueFrom). Added after
+    # the built-in env vars. To apply env to the whole pod (e.g. an HTTP proxy),
+    # also set operator.vector.additionalEnv.
+    # Example:
+    # additionalEnv:
+    #   - name: HTTPS_PROXY
+    #     value: "http://proxy.internal:3128"
+    additionalEnv: []
 
   serviceAccount:
     name: anyscale-operator
@@ -585,6 +596,12 @@ operator:
         memory: 512Mi
       limits:
         memory: 512Mi
+
+    # array, additionalEnv, default: []
+    # Extra environment variables to add to the vector sidecar (same schema as
+    # operator.container.additionalEnv). Set both to apply env to every container
+    # in the pod.
+    additionalEnv: []
 
   # Deployment configuration.
   # NOTE: To configure the operator deployment's pod template, use the fields above
