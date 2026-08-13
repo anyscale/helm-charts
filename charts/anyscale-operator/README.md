@@ -66,6 +66,14 @@ For advanced usage consult with Anyscale support.
 | `workloads.serviceAccount.name` | string | `""` | Service account name for Anyscale workload pods. If not set, uses the default service account. |
 | `workloads.serviceAccount.iamMappingAnnotation` | string | `"anyscale.com/iam-mapping"` | Annotation key used to identify pods that use IAM mapping. If present, the operator will skip applying `workloads.serviceAccount.name` to the pod. |
 
+#### Image Pull Secrets
+
+Use these to pull workload container images from a private registry (e.g. a self-hosted registry in your own cloud project).
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `workloads.imagePullSecrets` | array | `[]` | Secrets added to every Anyscale workload pod's `spec.imagePullSecrets`. Each entry's `name` is injected into the pod. Multiple entries are supported. By default the referenced secret must already exist in the pod's namespace. Set `create: true` on an entry to have the chart also create the secret in the operator namespace and sync it into every managed namespace (via the `anyscale.com/sync-to-managed-namespaces: "true"` label); the entry's `data` (rendered as-is under the Secret's `data`) and optional `type` (default `kubernetes.io/dockerconfigjson`) are used to build it. See values.yaml for an example. |
+
 #### Instance Types
 
 | Parameter | Type | Default | Description |
@@ -135,7 +143,7 @@ For advanced usage consult with Anyscale support.
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-00e6d0075d63c550082ad6856abddf8adb96e7bd` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-52a05abd5073d2f973e41f23cf5a4076ea033579` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |
