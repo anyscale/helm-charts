@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-00e6d0075d63c550082ad6856abddf8adb96e7bd
+          tag: ci-52a05abd5073d2f973e41f23cf5a4076ea033579
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
@@ -135,6 +135,22 @@ workloads:
     # The annotation key used to identify pods that use IAM mapping.
     # If this annotation is present, the Anyscale Operator will skip applying `workload.serviceAccount.name` to the pod.
     iamMappingAnnotation: "anyscale.com/iam-mapping"
+
+  # array, imagePullSecrets, default: []
+  # Secret refs added to every workload pod's `spec.imagePullSecrets` (for pulling images from a private registry).
+  # Each entry's `name` is injected into the pod. By default the secret must already exist in the pod's namespace.
+  # Set `create: true` to have the chart also create the secret in the operator namespace and sync it (via the
+  # `anyscale.com/sync-to-managed-namespaces` label) into every managed namespace; `data` (rendered as-is under the
+  # Secret's `data`) and `type` are then used to build it.
+  # Example:
+  #   imagePullSecrets:
+  #     - name: existing-registry-creds          # reference-only: must already exist / be synced
+  #     - name: anyscale-ray-registry-credentials # chart-managed: created, synced, and injected
+  #       create: true
+  #       type: kubernetes.io/dockerconfigjson    # default: kubernetes.io/dockerconfigjson
+  #       data:
+  #         .dockerconfigjson: "<base64 of a .dockerconfigjson>"
+  imagePullSecrets: []
 
   # Instance types configuration
   instanceTypes:
@@ -560,7 +576,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-00e6d0075d63c550082ad6856abddf8adb96e7bd"
+      tag: "ci-52a05abd5073d2f973e41f23cf5a4076ea033579"
 
     resources:
       requests:

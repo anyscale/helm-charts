@@ -25,6 +25,25 @@ data:
           value: "{{ .Values.workloads.serviceAccount.name }}"
     {{- end }}
 
+    {{- /* Image Pull Secrets */ -}}
+    {{- if .Values.workloads.imagePullSecrets }}
+    ########################################
+    # Image Pull Secrets
+    ########################################
+    # Inject imagePullSecrets into every workload pod so images can be pulled
+    # from a private registry. Appending to /spec/imagePullSecrets/- is safe
+    # whether or not the pod already declares the array (the operator applies
+    # patches with EnsurePathExistsOnAdd).
+    - kind: Pod
+      patch:
+        {{- range .Values.workloads.imagePullSecrets }}
+        - op: add
+          path: /spec/imagePullSecrets/-
+          value:
+            name: {{ required "workloads.imagePullSecrets[].name is required" .name }}
+        {{- end }}
+    {{- end }}
+
     {{- /* Azure Workload Identity Support */ -}}
     {{- if eq .Values.global.cloudProvider "azure" }}
     - kind: Pod
