@@ -81,6 +81,7 @@ Use these to pull workload container images from a private registry (e.g. a self
 | `workloads.instanceTypes.enableDefaults` | bool | `true` | Whether to enable default instance types provided by the chart |
 | `workloads.instanceTypes.defaults` | object | See values.yaml | Default instance types (2CPU-8GB, 4CPU-16GB, 8CPU-32GB, 8CPU-32GB-1xT4). These provide Pod shapes that can be used in Anyscale workloads. |
 | `workloads.instanceTypes.additional` | object | `{}` | Additional user-defined instance types. If `enableDefaults` is true, these merge with defaults. If false, these replace defaults. See values.yaml for schema and examples. |
+| `workloads.instanceTypes.configMap.format` | string | `"yaml"` | Serialization format of the instance-types ConfigMap data. Allowed values: `yaml`, `json`. Set to `json` if a GitOps controller such as Argo CD reports this ConfigMap as permanently out of sync due to non-deterministic ordering on serialization. |
 | `workloads.instanceTypes.validationHook.enabled` | bool | `true` | Run the pre-install/pre-upgrade Helm hook that validates the instance-types ConfigMap against the Anyscale Control Plane before the release is applied. Set to `false` to skip this pre-flight check (e.g. when the Control Plane is not reachable from the cluster at install time). Does not affect the runtime validating webhook, which still validates instance-types ConfigMap changes. |
 
 #### Workload Features
@@ -143,7 +144,7 @@ Use these to pull workload container images from a private registry (e.g. a self
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-52a05abd5073d2f973e41f23cf5a4076ea033579` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-2690d302ea8e077e8fa8842314f28948cc401ba6` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |

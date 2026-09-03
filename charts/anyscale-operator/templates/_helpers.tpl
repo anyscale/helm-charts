@@ -14,11 +14,19 @@ Validate controlPlaneURL to ensure it doesn't end with a trailing slash
 {{- end -}}
 
 {{/*
-Returns the merged workload instance types (defaults + additional) as YAML.
-This is the single source of truth for what lands in the instance-types
-ConfigMap; the ConfigMap template, the pre-install validation hook, and the
-hasInstanceTypes gate all MUST consume this helper so they never disagree
-about what is being deployed.
+Returns the merged workload instance types (defaults + additional), serialized in
+the format selected by workloads.instanceTypes.configMap.format. This is the
+single source of truth for what lands in the instance-types ConfigMap; the ConfigMap
+template, the pre-install validation hook, and the hasInstanceTypes gate all
+MUST consume this helper so they never disagree about what is being deployed.
+
+"yaml" is the original serialization and is left exactly as it was, so upgrading
+cannot change a rendered ConfigMap. It is NOT deterministic: toYaml routes through
+yaml.v2, whose key comparator is non-transitive for names mixing digit and letter
+runs, so its unstable sort emits a different order per process.
+
+"json" is the fix for that, and is opt-in: encoding/json sorts map keys by
+contract, so the bytes are stable.
 */}}
 {{- define "anyscale-operator.mergedInstanceTypes" -}}
 {{- $allInstanceTypes := dict -}}
@@ -26,7 +34,14 @@ about what is being deployed.
   {{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.defaults) -}}
 {{- end -}}
 {{- $allInstanceTypes = merge $allInstanceTypes (default dict .Values.workloads.instanceTypes.additional) -}}
+{{- $format := .Values.workloads.instanceTypes.configMap.format | default "yaml" | lower -}}
+{{- if eq $format "json" -}}
+{{- $allInstanceTypes | toPrettyJson -}}
+{{- else if eq $format "yaml" -}}
 {{- $allInstanceTypes | toYaml -}}
+{{- else -}}
+{{- fail (printf "workloads.instanceTypes.configMap.format must be \"yaml\" or \"json\", got %q" $format) -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
