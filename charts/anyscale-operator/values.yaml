@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-52a05abd5073d2f973e41f23cf5a4076ea033579
+          tag: ci-2690d302ea8e077e8fa8842314f28948cc401ba6
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
@@ -158,6 +158,12 @@ workloads:
     # The name of the ConfigMap to store the instance types.
     configMap:
       name: "instance-types"
+
+      # string, format, default: "yaml"
+      # The serialization format of the instance-types ConfigMap data.
+      # Allowed values: "yaml", "json".
+      # Use "json" if it is important for the serialization to be deterministic, i.e. for GitOps
+      format: "yaml"
 
     # Instance-type validation hook
     validationHook:
@@ -576,7 +582,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-52a05abd5073d2f973e41f23cf5a4076ea033579"
+      tag: "ci-2690d302ea8e077e8fa8842314f28948cc401ba6"
 
     resources:
       requests:
