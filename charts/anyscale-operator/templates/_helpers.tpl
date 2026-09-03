@@ -9,6 +9,34 @@ Validate controlPlaneURL to ensure it doesn't end with a trailing slash
 {{- $url -}}
 {{- end -}}
 
+{{/*
+Renders HTTP(S) proxy environment variables from global.proxy in both the
+upper-case and lower-case forms, since different tools read different casings.
+Emits nothing when no proxy values are configured.
+*/}}
+{{- define "anyscale-operator.proxyEnv" -}}
+{{- with .Values.global.proxy }}
+{{- if .httpProxy }}
+- name: HTTP_PROXY
+  value: {{ .httpProxy | quote }}
+- name: http_proxy
+  value: {{ .httpProxy | quote }}
+{{- end }}
+{{- if .httpsProxy }}
+- name: HTTPS_PROXY
+  value: {{ .httpsProxy | quote }}
+- name: https_proxy
+  value: {{ .httpsProxy | quote }}
+{{- end }}
+{{- if .noProxy }}
+- name: NO_PROXY
+  value: {{ .noProxy | quote }}
+- name: no_proxy
+  value: {{ .noProxy | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
 {{- define "anyscale-operator.usePathStyle" -}}
 {{- if or .Values.global.aws.s3.usePathStyle (eq (.Values.credentialMount.aws.createSecret.addressingStyle | default "") "path") -}}true{{- end -}}
 {{- end -}}
