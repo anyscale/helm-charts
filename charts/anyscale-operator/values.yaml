@@ -129,11 +129,39 @@ workloads:
     # string, name, default: ""
     # The name of the service account to use for the workloads.
     # If not set, the Anyscale Operator will use the default service account.
+    # The service account must exist in every namespace where workload pods run (the release namespace and
+    # every namespace in `workloads.managedNamespaces`); the Kubernetes API server rejects a pod whose
+    # service account does not exist in the pod's namespace. Set `create: true` to have the chart create it.
     name: ""
+
+    # bool, create, default: false
+    # Whether the chart creates the service account named by `name`.
+    # A ServiceAccount is namespace-scoped and workload pods can be scheduled into the release namespace or
+    # any namespace in `workloads.managedNamespaces`, so one ServiceAccount is created in each of them.
+    # Requirements:
+    #   - `name` must be set.
+    #   - Every namespace in `workloads.managedNamespaces` must already exist when the chart is installed or
+    #     upgraded. The chart does not create namespaces.
+    #   - Leave `create: false` if the service account already exists outside this release. Helm does not
+    #     take over resources it did not create.
+    #   - The cloud IAM trust must cover every namespace the service account is created in, i.e. one
+    #     `system:serviceaccount:<namespace>:<name>` subject per namespace (EKS IAM role trust policy,
+    #     GKE Workload Identity binding, Azure federated identity credential), or a wildcard where the
+    #     provider supports one (e.g. AWS `StringLike` on `system:serviceaccount:*:<name>`).
+    create: false
+
+    # object, annotations, default: {}
+    # Annotations added to the created service account. Only used when `create` is true.
+    # Use the annotation your cloud provider requires to map the service account to a cloud IAM identity:
+    #   AWS (IRSA):               eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/<role-name>
+    #   GCP (Workload Identity):  iam.gke.io/gcp-service-account: <gsa-name>@<project-id>.iam.gserviceaccount.com
+    #   Azure (Workload Identity): azure.workload.identity/client-id: <client-id>
+    #     (the chart already labels workload pods with `azure.workload.identity/use: "true"` on Azure)
+    annotations: {}
 
     # string, iamMappingAnnotation, default: "anyscale.com/iam-mapping"
     # The annotation key used to identify pods that use IAM mapping.
-    # If this annotation is present, the Anyscale Operator will skip applying `workload.serviceAccount.name` to the pod.
+    # If this annotation is present, the Anyscale Operator will skip applying `workloads.serviceAccount.name` to the pod.
     iamMappingAnnotation: "anyscale.com/iam-mapping"
 
   # array, imagePullSecrets, default: []

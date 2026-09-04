@@ -63,7 +63,9 @@ For advanced usage consult with Anyscale support.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `workloads.serviceAccount.name` | string | `""` | Service account name for Anyscale workload pods. If not set, uses the default service account. |
+| `workloads.serviceAccount.name` | string | `""` | Service account name for Anyscale workload pods. If not set, uses the default service account. Must exist in every namespace where workload pods run (the release namespace and every `workloads.managedNamespaces` entry) unless `workloads.serviceAccount.create` is `true`. |
+| `workloads.serviceAccount.create` | bool | `false` | Create the service account named by `workloads.serviceAccount.name` in the release namespace and in every namespace in `workloads.managedNamespaces`, since workload pods can run in any of them. Those namespaces must already exist, and the cloud IAM trust must cover each `system:serviceaccount:<namespace>:<name>` subject. Leave `false` if the service account already exists outside this release. |
+| `workloads.serviceAccount.annotations` | object | `{}` | Annotations added to the created service account, e.g. `eks.amazonaws.com/role-arn` (AWS IRSA), `iam.gke.io/gcp-service-account` (GKE Workload Identity), `azure.workload.identity/client-id` (Azure Workload Identity). Only used when `create` is `true`. |
 | `workloads.serviceAccount.iamMappingAnnotation` | string | `"anyscale.com/iam-mapping"` | Annotation key used to identify pods that use IAM mapping. If present, the operator will skip applying `workloads.serviceAccount.name` to the pod. |
 
 #### Image Pull Secrets
