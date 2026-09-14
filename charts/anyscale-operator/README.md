@@ -63,7 +63,7 @@ For advanced usage consult with Anyscale support.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `workloads.serviceAccount.name` | string | `""` | Service account name for Anyscale workload pods. If not set, uses the default service account. |
+| `workloads.serviceAccount.name` | string | `""` | Service account the operator attaches to workload pods. If not set, pods get their namespace's `default` service account (not the operator's), so they do not inherit the operator's cloud identity. Typically set to `operator.serviceAccount.name`. |
 | `workloads.serviceAccount.iamMappingAnnotation` | string | `"anyscale.com/iam-mapping"` | Annotation key used to identify pods that use IAM mapping. If present, the operator will skip applying `workloads.serviceAccount.name` to the pod. |
 
 #### Image Pull Secrets

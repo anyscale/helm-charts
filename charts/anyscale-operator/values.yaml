@@ -127,13 +127,16 @@ workloads:
   # Service account for workloads
   serviceAccount:
     # string, name, default: ""
-    # The name of the service account to use for the workloads.
-    # If not set, the Anyscale Operator will use the default service account.
+    # The service account the Anyscale Operator attaches to workload pods.
+    # If not set, workload pods get the `default` service account of the namespace
+    # they run in, not the operator's service account, so they do not inherit the
+    # cloud identity bound to the operator. To give workloads the operator's cloud
+    # identity, set this to `operator.serviceAccount.name` (e.g. "anyscale-operator").
     name: ""
 
     # string, iamMappingAnnotation, default: "anyscale.com/iam-mapping"
     # The annotation key used to identify pods that use IAM mapping.
-    # If this annotation is present, the Anyscale Operator will skip applying `workload.serviceAccount.name` to the pod.
+    # If this annotation is present, the Anyscale Operator will skip applying `workloads.serviceAccount.name` to the pod.
     iamMappingAnnotation: "anyscale.com/iam-mapping"
 
   # array, imagePullSecrets, default: []
