@@ -1,0 +1,28 @@
+{{- if .Values.workloads.createPerNamespaceRoleBindings }}
+{{- range .Values.workloads.managedNamespaces }}
+{{- /* The operator's own namespace is already covered by the Role in role.yaml. */}}
+{{- if ne . $.Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  # Suffixed with the release namespace so two operator releases declaring the
+  # same workload namespace don't fight over one binding.
+  name: anyscale-operator-workloads-{{ $.Release.Namespace }}
+  namespace: {{ . }}
+  labels:
+    helm.sh/chart: {{ $.Chart.Name }}-{{ $.Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ $.Chart.Name }}
+    app.kubernetes.io/instance: {{ $.Release.Name }}
+    app.kubernetes.io/managed-by: {{ $.Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: anyscale-operator-workloads-{{ $.Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: {{ $.Values.operator.serviceAccount.name }}
+  namespace: {{ $.Release.Namespace }}
+{{- end }}
+{{- end }}
+{{- end }}

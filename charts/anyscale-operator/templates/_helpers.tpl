@@ -9,6 +9,35 @@ Validate controlPlaneURL to ensure it doesn't end with a trailing slash
 {{- $url -}}
 {{- end -}}
 
+{{/*
+Fail when the value is not a valid Kubernetes namespace name (RFC 1123 label).
+Call with (dict "field" "<values key>" "value" <candidate>).
+*/}}
+{{- define "anyscale-operator.validateNamespaceName" -}}
+{{- if not (kindIs "string" .value) -}}
+{{- fail (printf "%s: %v is not a string; quote the namespace name" .field .value) -}}
+{{- end -}}
+{{- if not (regexMatch "^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$" .value) -}}
+{{- fail (printf "%s: %q is not a valid Kubernetes namespace name: 1-63 lowercase alphanumeric characters or '-', starting and ending with an alphanumeric character" .field .value) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+The node label that is present only on accelerator nodes, used to keep CPU workloads
+off them. AWS, Azure and the fallback use the GPU-feature-discovery label set -- the
+same set the accelerator node selectors consume -- while GKE labels its accelerator
+pools itself and has no GFD dependency.
+*/}}
+{{- define "anyscale-operator.gpuNodeSelectorKey" -}}
+{{- if .Values.workloads.accelerator.customNodeSelectorKey -}}
+{{- .Values.workloads.accelerator.customNodeSelectorKey -}}
+{{- else if eq .Values.global.cloudProvider "gcp" -}}
+cloud.google.com/gke-accelerator
+{{- else -}}
+nvidia.com/gpu.count
+{{- end -}}
+{{- end -}}
+
 {{- define "anyscale-operator.usePathStyle" -}}
 {{- if or .Values.global.aws.s3.usePathStyle (eq (.Values.credentialMount.aws.createSecret.addressingStyle | default "") "path") -}}true{{- end -}}
 {{- end -}}

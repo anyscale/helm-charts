@@ -1,0 +1,29 @@
+{{- if .Values.workloads.createPerNamespaceRoleBindings }}
+{{- if not .Values.workloads.enableCrossNamespaceResourceManagement }}
+{{- fail "workloads.createPerNamespaceRoleBindings requires workloads.enableCrossNamespaceResourceManagement: true — it selects HOW cross-namespace access is granted (namespace-scoped RoleBindings instead of the cluster-wide grant), not whether it exists" }}
+{{- end }}
+{{- if .Values.workloads.discoverManagedNamespaces }}
+{{- fail "workloads.createPerNamespaceRoleBindings cannot be combined with workloads.discoverManagedNamespaces: no RoleBindings can be rendered for namespaces discovered at runtime, so discovery needs the cluster-wide grant" }}
+{{- end }}
+{{- if not .Values.workloads.managedNamespaces }}
+{{- fail "workloads.createPerNamespaceRoleBindings requires workloads.managedNamespaces to list the workload namespaces" }}
+{{- end }}
+# Holds the workload-management rules once; granted per namespace via the
+# RoleBindings in workload_role_bindings.yaml. Unlike the token-reviewer
+# ClusterRole this one has no ClusterRoleBinding, so it grants nothing
+# cluster-wide.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # Since this is a global resource, we append the namespace to it to support
+  # launching multiple cloud deployments into a single Kubernetes cluster (we
+  # assume that clouds do not share namespaces).
+  name: anyscale-operator-workloads-{{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+rules:
+{{- include "anyscale-operator.rbac-rules" . }}
+{{- end }}

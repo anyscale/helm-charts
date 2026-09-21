@@ -114,6 +114,21 @@ spec:
         - --service-auth-fallback-enabled=true
         {{- end }}
         {{- end }}
+        {{- if .Values.workloads.targetNamespace }}
+        {{- include "anyscale-operator.validateNamespaceName" (dict "field" "workloads.targetNamespace" "value" .Values.workloads.targetNamespace) }}
+        {{- if .Values.workloads.discoverManagedNamespaces }}
+        {{- fail "workloads.targetNamespace is not supported with workloads.discoverManagedNamespaces: enumerate the namespaces in workloads.managedNamespaces instead" }}
+        {{- end }}
+        {{- if not .Values.workloads.enableCrossNamespaceResourceManagement }}
+        {{- fail "workloads.targetNamespace is only supported with workloads.enableCrossNamespaceResourceManagement=true" }}
+        {{- end }}
+        {{- /* Membership is required in BOTH RBAC modes: secret sync (image pull,
+             credential mounts) reaches only managed namespaces. */}}
+        {{- if and (ne (toString .Values.workloads.targetNamespace) .Release.Namespace) (not (has .Values.workloads.targetNamespace .Values.workloads.managedNamespaces)) }}
+        {{- fail "workloads.targetNamespace must be listed in workloads.managedNamespaces: membership drives secret sync into the namespace (image pull and credential mount secrets) and, with createPerNamespaceRoleBindings, the operator's permissions and reads" }}
+        {{- end }}
+        - --workload-target-namespace={{ .Values.workloads.targetNamespace }}
+        {{- end }}
         - --system-logs-ingress-proxy-port=3100
         - --system-metrics-ingress-proxy-port=3101
         - --vector-enrichment-table-path=/tmp/config/vector/runtime_metadata.csv
@@ -142,6 +157,15 @@ spec:
         - --instance-types-config-map-name={{ .Values.workloads.instanceTypes.configMap.name | default "instance-types" }}
         {{- if .Values.workloads.enableCrossNamespaceResourceManagement }}
         - --enable-cross-namespace-resource-management=true
+        {{- if .Values.workloads.createPerNamespaceRoleBindings }}
+        - --per-namespace-rbac=true
+        {{- end }}
+        {{- if .Values.workloads.discoverManagedNamespaces }}
+        {{- /* required: an empty selector would silently fall back to the ConfigMap. Quoted so any selector syntax survives YAML parsing. */}}
+        - {{ printf "--managed-namespaces-label-selector=%s" (required "workloads.managedNamespacesLabelSelector must be set when workloads.discoverManagedNamespaces is true" .Values.workloads.managedNamespacesLabelSelector) | quote }}
+        {{- end }}
+        {{- else if .Values.workloads.discoverManagedNamespaces }}
+        {{- fail "workloads.discoverManagedNamespaces requires workloads.enableCrossNamespaceResourceManagement: true (discovered namespaces are reached through the cluster-wide grant)" }}
         {{- end }}
         readinessProbe:
           httpGet:
@@ -153,6 +177,8 @@ spec:
         resources:
 {{ toYaml .Values.operator.container.resources | indent 10 }}
         env:
+        - name: GIT_SHA
+          value: {{ $operatorImage.tag | quote }}
         {{- if include "anyscale-operator.usePathStyle" . }}
         - name: ANYSCALE_S3_USE_PATH_STYLE
           value: "true"
@@ -225,6 +251,30 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: status.podIP
+          # Vector 0.57 skips ${VAR} interpolation in config files unless this
+          # is set, and skips it silently: the sidecar starts, stays healthy,
+          # and labels every log and metric with the literal string "${POD_NAME}".
+          #
+          # The "DANGEROUSLY" in the name guards deployments where the config
+          # author and the environment are different trust domains: a config
+          # that names a secret-bearing variable copies that secret into its
+          # output. That boundary does not exist here. Interpolation expands
+          # only the variables this config names, the config names only
+          # downward-API pod metadata (POD_NAME, POD_IP, POD_NAMESPACE), and
+          # the config and the container environment are rendered from this
+          # same chart, so anyone able to change one already controls the
+          # other. The guarantee rests on what the config names rather than on
+          # what the environment holds, so operator.vector.additionalEnv
+          # cannot widen it.
+          #
+          # The exit from this override is event-time enrichment: a remap
+          # transform stamps pod metadata onto events with get_env_var!(), and
+          # sinks template labels from event fields instead of config text.
+          # Once no config text names a ${VAR}, this flag goes away. It does
+          # not retire the Loki sink's confinement opt-out, which those
+          # event-field labels still require.
+          - name: VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION
+            value: "true"
         {{- with .Values.operator.vector.additionalEnv }}
 {{ toYaml . | indent 10 }}
         {{- end }}

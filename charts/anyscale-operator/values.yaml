@@ -56,11 +56,11 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-2690d302ea8e077e8fa8842314f28948cc401ba6
+          tag: ci-781e104ec6d4ac246bf4efad65c2980f89dd70c0
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector
-          tag: 0.40.0-debian
+          tag: 0.57.0-debian
 
 ################################################################
 # Networking and ingress configuration
@@ -124,16 +124,42 @@ networking:
 # Workload configuration - settings that affect user workloads
 ################################################################
 workloads:
+  # string, targetNamespace, default: ""
+  # The namespace to launch workloads in when a workload's compute config does not
+  # set the `target_kubernetes_namespace` flag; a set flag wins. Unset means the
+  # operator's own namespace. Requires `enableCrossNamespaceResourceManagement: true`;
+  # the namespace must exist and, unless it is the operator's own, be listed in
+  # `managedNamespaces` (membership drives secret sync and, with
+  # `createPerNamespaceRoleBindings`, the operator's permissions and reads) — the
+  # chart refuses to render otherwise. Not supported with
+  # `discoverManagedNamespaces: true`. Binds at workload launch; changes affect
+  # only workloads launched afterward.
+  targetNamespace: ""
+
   # Service account for workloads
   serviceAccount:
     # string, name, default: ""
-    # The name of the service account to use for the workloads.
-    # If not set, the Anyscale Operator will use the default service account.
+    # The service account the Anyscale Operator attaches to workload pods.
+    # If not set, workload pods get the `default` service account of the namespace they
+    # run in. For workloads in the operator's namespace that should share its
+    # identity, set this to `operator.serviceAccount.name`.
+    # Must exist in every namespace workload pods run in unless `create` is true.
     name: ""
+
+    # bool, create, default: false
+    # Create `name` in the release namespace and each `workloads.managedNamespaces` entry
+    # (ServiceAccounts are namespace-scoped). The namespaces must already exist, and the cloud IAM
+    # trust must cover each `system:serviceaccount:<namespace>:<name>`. Leave false if it already exists.
+    create: false
+
+    # object, annotations, default: {}
+    # Annotations on the created service account, e.g. `eks.amazonaws.com/role-arn`,
+    # `iam.gke.io/gcp-service-account`, `azure.workload.identity/client-id`.
+    annotations: {}
 
     # string, iamMappingAnnotation, default: "anyscale.com/iam-mapping"
     # The annotation key used to identify pods that use IAM mapping.
-    # If this annotation is present, the Anyscale Operator will skip applying `workload.serviceAccount.name` to the pod.
+    # If this annotation is present, the Anyscale Operator will skip applying `workloads.serviceAccount.name` to the pod.
     iamMappingAnnotation: "anyscale.com/iam-mapping"
 
   # array, imagePullSecrets, default: []
@@ -316,10 +342,52 @@ workloads:
   # This is required to profile Ray processes, such as viewing stacktraces and flamegraphs for actors
   enableProcessTracing: true
 
+  # bool, enableNodeReads, default: true
+  # Whether to let workload pods read the Node they are scheduled on, for node facts
+  # the downward API does not expose. Required for certain topology-aware features in Ray.
+  enableNodeReads: true
+
   # array, managedNamespaces, default: []
   # A list of namespaces where the Anyscale Operator's namespace secrets will be copied to.
   # The operator will periodically copy all secrets from its own namespace to these namespaces.
+  # With `discoverManagedNamespaces: true` the labels are the source and this list is
+  # only compared against them: the operator refuses to start unless both name the
+  # same namespaces. Keep it while migrating to prove parity, then empty it.
   managedNamespaces: []
+
+  # bool, createPerNamespaceRoleBindings, default: false
+  # With `enableCrossNamespaceResourceManagement: true`, grant the operator its
+  # workload-management permissions per `managedNamespaces` entry via
+  # namespaced RoleBindings to a shared ClusterRole, instead of the cluster-wide
+  # grant — and make the operator read across exactly those namespaces. Use
+  # this to run workloads in namespaces other than the operator's
+  # (`target_kubernetes_namespace` in a compute config) while keeping the
+  # operator's permissions namespace-scoped. The namespaces must already exist.
+  # Requires `enableCrossNamespaceResourceManagement: true`. With Gateway API
+  # networking, the gateway's namespace must be the operator's namespace or a
+  # `managedNamespaces` entry — ReferenceGrant creation there needs the grant.
+  createPerNamespaceRoleBindings: false
+
+  # bool, discoverManagedNamespaces, default: false
+  # Discover the managed namespaces at runtime instead of listing them in
+  # `managedNamespaces`: every Namespace matching `managedNamespacesLabelSelector`
+  # is managed while the label is present (picked up within about 90 seconds).
+  # Removing the label, or a selector that matches nothing, removes namespaces from
+  # the set and deletes the synced secrets there, like editing `managedNamespaces`.
+  # Requires `enableCrossNamespaceResourceManagement: true` with the cluster-wide
+  # grant (not `createPerNamespaceRoleBindings`) and grants the operator cluster-wide
+  # get/list/watch on Namespaces. If `managedNamespaces` is also set, the operator
+  # refuses to start unless that list and the labelled namespaces are the same set
+  # (a migration check; empty the list once they agree). See the README's "Managed
+  # Namespaces" section for what the chart cannot render for namespaces it only
+  # learns about at runtime.
+  discoverManagedNamespaces: false
+
+  # string, managedNamespacesLabelSelector, default: "anyscale-managed=true"
+  # Kubernetes label selector that picks the managed namespaces when
+  # `discoverManagedNamespaces` is true. Give each operator in a shared cluster
+  # its own selector to shard namespaces between them, e.g. `anyscale-managed=team-a`.
+  managedNamespacesLabelSelector: "anyscale-managed=true"
 
   # Market type support
   # nodeSelector, affinity and toleration patches for pods based on market type
@@ -475,6 +543,9 @@ workloads:
     # - AWS: "nvidia.com/gpu.product"
     # - GCP: "cloud.google.com/gke-accelerator"
     # - Azure: "nvidia.com/gpu.product"
+    #
+    # This key also identifies an accelerator node for the term that keeps CPU workloads
+    # off GPU nodes.
     customNodeSelectorKey: ""
 
     # Accelerator type to node selector value mappings per cloud provider
@@ -582,7 +653,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-2690d302ea8e077e8fa8842314f28948cc401ba6"
+      tag: "ci-781e104ec6d4ac246bf4efad65c2980f89dd70c0"
 
     resources:
       requests:
@@ -610,7 +681,7 @@ operator:
     image:
       registry: "" # empty string means use the default registry (docker.io)
       image: timberio/vector
-      tag: "0.40.0-debian"
+      tag: "0.57.0-debian"
 
     resources:
       requests:
@@ -665,6 +736,8 @@ operator:
       #  - IAM_IDENTITY
       #  - KUBERNETES_PERMISSIONS
       #  - INSTANCE_TYPES
+      #  - MANAGED_NAMESPACES (the startup check that `workloads.managedNamespaces` and
+      #    the namespaces labelled for `discoverManagedNamespaces` are the same set)
       #
       # By default, all components will be verified during the operator startup sequence.
       # Note: INSTANCE_TYPES is automatically appended by the chart when no instance

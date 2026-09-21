@@ -150,7 +150,6 @@ data:
     ########################################
     # GPU Support
     ########################################
-    {{- if eq .Values.global.cloudProvider "aws" }}
     # Prevent CPU workloads from being scheduled on GPU nodes.
     - kind: Pod
       selector: "!anyscale.com/accelerator-type"
@@ -159,9 +158,8 @@ data:
           path: /spec/affinity/nodeAffinity/requiredDuringSchedulingIgnoredDuringExecution/nodeSelectorTerms/-
           value:
             matchExpressions:
-              - key: "nvidia.com/gpu.count"
+              - key: "{{ include "anyscale-operator.gpuNodeSelectorKey" . }}"
                 operator: DoesNotExist
-    {{- end }}
 
     {{- /* GPU Node Selectors */ -}}
     {{- $allAccelerators := dict }}
