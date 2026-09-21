@@ -1,4 +1,10 @@
 {{- if .Values.workloads.managedNamespaces }}
+{{- /* Renders alongside discoverManagedNamespaces on purpose: the operator compares
+     this list with the labelled namespaces at startup and refuses to start if they
+     differ, so a migration can prove parity before the list is emptied. */}}
+{{- range .Values.workloads.managedNamespaces }}
+{{- include "anyscale-operator.validateNamespaceName" (dict "field" "workloads.managedNamespaces" "value" .) }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

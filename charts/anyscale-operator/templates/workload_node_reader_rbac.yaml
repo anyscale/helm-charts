@@ -1,0 +1,50 @@
+{{- if .Values.workloads.enableNodeReads }}
+# Lets workload pods read the Node they are scheduled on, for node facts the
+# downward API does not expose (node labels, for example). Pods run as the
+# namespace default service account or, under IAM mapping, a customer-supplied
+# one, so this binds the service account group of every namespace workloads can
+# land in rather than a single name.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # Since this is a global resource, we append the namespace to it to support
+  # launching multiple cloud deployments into a single Kubernetes cluster (we
+  # assume that clouds to not share namespaces).
+  name: anyscale-workload-node-reader-{{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+rules:
+  # get only: a pod can read a Node it names, not enumerate the cluster.
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  # Since this is a global resource, we append the namespace to it to support
+  # launching multiple cloud deployments into a single Kubernetes cluster (we
+  # assume that clouds to not share namespaces).
+  name: anyscale-workload-node-reader-{{ .Release.Namespace }}
+  labels:
+    helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version | replace "+" "_" }}
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: anyscale-workload-node-reader-{{ .Release.Namespace }}
+subjects:
+  - kind: Group
+    name: system:serviceaccounts:{{ .Release.Namespace }}
+    apiGroup: rbac.authorization.k8s.io
+{{- range .Values.workloads.managedNamespaces }}
+  - kind: Group
+    name: system:serviceaccounts:{{ . }}
+    apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}

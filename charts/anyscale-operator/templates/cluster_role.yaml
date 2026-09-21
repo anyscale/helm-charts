@@ -17,7 +17,17 @@ rules:
   - apiGroups: [""]
     resources: ["events", "nodes"]
     verbs: ["get", "watch", "list"]
-{{- if .Values.workloads.enableCrossNamespaceResourceManagement }}
-# If cross-namespace resource management is enabled, we need to grant the cluster role access to all resources in all namespaces.
+{{- if .Values.workloads.discoverManagedNamespaces }}
+  # Discovery lists Namespaces by label. Namespaces are cluster-scoped, so only
+  # this cluster-bound role can grant it.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "watch", "list"]
+{{- end }}
+{{- if and .Values.workloads.enableCrossNamespaceResourceManagement (not .Values.workloads.createPerNamespaceRoleBindings) }}
+# Cross-namespace resource management with a cluster-wide grant: this
+# ClusterRole is cluster-bound, so the workload rules here apply to all
+# namespaces. With createPerNamespaceRoleBindings the same rules are granted
+# per managed namespace instead (workload_cluster_role.yaml).
 {{- include "anyscale-operator.rbac-rules" . }}
 {{- end }}

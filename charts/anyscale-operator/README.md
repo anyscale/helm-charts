@@ -59,11 +59,17 @@ For advanced usage consult with Anyscale support.
 
 ### Workloads Configuration
 
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `workloads.targetNamespace` | string | `""` | Namespace to launch workloads in when a workload's compute config does not set the `target_kubernetes_namespace` flag; a set flag wins. Unset means the operator's own namespace. Requires `workloads.enableCrossNamespaceResourceManagement: true`; the namespace must exist and, unless it is the operator's own, be listed in `workloads.managedNamespaces` (membership drives secret sync and, with `createPerNamespaceRoleBindings: true`, the operator's permissions and reads) — the chart refuses to render otherwise. Not supported with `workloads.discoverManagedNamespaces: true`. Binds at workload launch; changes affect only workloads launched afterward. |
+
 #### Service Account
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `workloads.serviceAccount.name` | string | `""` | Service account name for Anyscale workload pods. If not set, uses the default service account. |
+| `workloads.serviceAccount.name` | string | `""` | Service account the operator attaches to workload pods. If not set, pods get their namespace's `default` service account. Must exist in every namespace workload pods run in unless `workloads.serviceAccount.create` is `true`. |
+| `workloads.serviceAccount.create` | bool | `false` | Create the service account in the release namespace and each `workloads.managedNamespaces` entry. The namespaces must already exist and the cloud IAM trust must cover each `system:serviceaccount:<namespace>:<name>`. Leave `false` if it already exists. |
+| `workloads.serviceAccount.annotations` | object | `{}` | Annotations on the created service account, e.g. `eks.amazonaws.com/role-arn`, `iam.gke.io/gcp-service-account`, `azure.workload.identity/client-id`. |
 | `workloads.serviceAccount.iamMappingAnnotation` | string | `"anyscale.com/iam-mapping"` | Annotation key used to identify pods that use IAM mapping. If present, the operator will skip applying `workloads.serviceAccount.name` to the pod. |
 
 #### Image Pull Secrets
@@ -91,6 +97,17 @@ Use these to pull workload container images from a private registry (e.g. a self
 | `workloads.enableAnyscaleRayHeadNodePDB` | bool | `true` | Create a PodDisruptionBudget to avoid head node evictions. This could block k8s cluster upgrade or maintenance. |
 | `workloads.enableZoneSelector` | bool | `false` | Enable zone-based node selection using "topology.kubernetes.io/zone" nodeSelector. Disabled by default as many cluster autoscalers don't respect zone node selectors. |
 | `workloads.enableKarpenterSupport` | bool | `false` | Enable Karpenter support. If true, the operator will use Karpenter node selectors and tolerations for market type. |
+| `workloads.enableNodeReads` | bool | `true` | Let workload pods read the Node they are scheduled on, for node facts the downward API does not expose. Renders a ClusterRole and ClusterRoleBinding granting `get` on Nodes to the service accounts of the release namespace and each `workloads.managedNamespaces` entry (Nodes are cluster-scoped, so this cannot be a Role). Today this backs the `ray.io/gpu-domain` label taken from the node's `nvidia.com/gpu.clique`; with it `false`, Ray starts without that label and topology-aware scheduling is unavailable. Set `false` where cluster-scoped grants to workload service accounts are not permitted. Does not cover namespaces found by `workloads.discoverManagedNamespaces`, which are unknown at template time. |
+
+#### Managed Namespaces
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `workloads.enableCrossNamespaceResourceManagement` | bool | `false` | Let the operator manage workload resources outside its own namespace. Required by `workloads.managedNamespaces` and `workloads.discoverManagedNamespaces`. |
+| `workloads.managedNamespaces` | array | `[]` | Static list of namespaces the operator manages: secrets from the operator namespace are synced into them and workloads are looked up there. Rendered into the `anyscale-managed-namespaces` ConfigMap. With `workloads.discoverManagedNamespaces: true` the labels are the source and this list is only compared against them: the operator refuses to start unless both name the same namespaces, so keep it while migrating to prove parity, then empty it. |
+| `workloads.createPerNamespaceRoleBindings` | bool | `false` | With `enableCrossNamespaceResourceManagement: true`, grant the operator its workload permissions per `managedNamespaces` entry through namespaced RoleBindings instead of the cluster-wide grant, and read across exactly those namespaces. The namespaces must already exist. Incompatible with `discoverManagedNamespaces`. |
+| `workloads.discoverManagedNamespaces` | bool | `false` | Discover the managed namespaces at runtime: every Namespace matching `workloads.managedNamespacesLabelSelector` is managed while the label is present (picked up within about 90 seconds). Removing the label removes it from the set and deletes the synced secrets; a selector that matches no namespace is an empty set and does the same everywhere, so relabel before changing the selector. Requires `enableCrossNamespaceResourceManagement: true` with the cluster-wide grant (incompatible with `createPerNamespaceRoleBindings`) and grants the operator cluster-wide get/list/watch on Namespaces. If `workloads.managedNamespaces` is also set, the operator refuses to start unless that list and the labelled namespaces are the same set (a migration check, skippable with `MANAGED_NAMESPACES` in `operator.config.status.excludeComponentVerification`); empty the list once they agree. With Gateway API networking, whether the gateway namespace is managed is decided at operator start. Discovered namespaces are invisible at render time, so `workloads.serviceAccount.create` and the workload node-reader binding cover only the release namespace: create the ServiceAccount alongside each namespace if needed, and for GPU clique labels a ClusterRoleBinding from `system:serviceaccounts:<namespace>` to the `anyscale-workload-node-reader-<release namespace>` ClusterRole (Nodes are cluster-scoped, so a RoleBinding cannot grant them). |
+| `workloads.managedNamespacesLabelSelector` | string | `"anyscale-managed=true"` | Label selector (Kubernetes syntax) used by `discoverManagedNamespaces`. Give each operator in a shared cluster its own selector to shard namespaces between them, e.g. `anyscale-managed=team-a`. |
 
 #### Market Type Configuration
 
@@ -144,14 +161,14 @@ Use these to pull workload container images from a private registry (e.g. a self
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-2690d302ea8e077e8fa8842314f28948cc401ba6` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-781e104ec6d4ac246bf4efad65c2980f89dd70c0` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |
 | `operator.container.additionalEnv` | array | `[]` | Extra env vars appended to the operator container (standard k8s `env` schema: name/value or name/valueFrom), after the built-in env vars, so a colliding name overrides the built-in. Also applied to the pre-install/pre-upgrade instance-types validation hook, which runs the operator image and calls the control plane, so proxy settings take effect during `helm install`/`upgrade` too. For pod-wide env such as an HTTP proxy (HTTP_PROXY/HTTPS_PROXY/NO_PROXY), also set `operator.vector.additionalEnv`. |
 | `operator.vector.image.registry` | string | `""` | Vector sidecar image registry (empty string uses default docker.io) |
 | `operator.vector.image.image` | string | `"timberio/vector"` | Vector sidecar image name |
-| `operator.vector.image.tag` | string | `"0.40.0-debian"` | Vector sidecar image tag |
+| `operator.vector.image.tag` | string | `"0.57.0-debian"` | Vector sidecar image tag |
 | `operator.vector.resources.requests.cpu` | string | `"100m"` | Vector sidecar CPU request |
 | `operator.vector.resources.requests.memory` | string | `"512Mi"` | Vector sidecar memory request |
 | `operator.vector.resources.limits.memory` | string | `"512Mi"` | Vector sidecar memory limit |
@@ -167,7 +184,7 @@ Use these to pull workload container images from a private registry (e.g. a self
 | `operator.config.unscheduledPodReaper.reconcileInterval` | duration | `"1m"` | Interval at which the unscheduled pod reaper should reconcile |
 | `operator.config.unscheduledPodReaper.terminationThreshold` | duration | `"10m"` | Threshold after which an unscheduled Pod should be considered leaked and terminated |
 | `operator.config.status.reportingEnabled` | bool | `true` | Whether to enable status reporting to the Anyscale Control Plane |
-| `operator.config.status.excludeComponentVerification` | array | `[]` | Components to skip verification for during startup and status checks. Valid values: STORAGE_BUCKET, KUBERNETES_VERSION, GATEWAY_RESOURCES, CLOUD_RESOURCES, IAM_IDENTITY, KUBERNETES_PERMISSIONS, INSTANCE_TYPES. INSTANCE_TYPES is auto-appended by the chart when no instance types are defined. |
+| `operator.config.status.excludeComponentVerification` | array | `[]` | Components to skip verification for during startup and status checks. Valid values: STORAGE_BUCKET, KUBERNETES_VERSION, GATEWAY_RESOURCES, CLOUD_RESOURCES, IAM_IDENTITY, KUBERNETES_PERMISSIONS, INSTANCE_TYPES, MANAGED_NAMESPACES. INSTANCE_TYPES is auto-appended by the chart when no instance types are defined. |
 | `operator.config.status.checkInterval` | duration | `"5m"` | Interval for status checks |
 | `operator.config.status.reportInterval` | duration | `"30s"` | Interval for status reporting |
 

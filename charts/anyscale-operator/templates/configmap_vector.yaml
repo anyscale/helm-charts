@@ -89,6 +89,14 @@ data:
         encoding:
           codec: json
         compression: snappy
+        # Vector 0.57 resolves a template only inside a base derived from its
+        # literal prefix, and cloud_id and file are bare event fields with no
+        # prefix to derive one from. Without the opt-out Vector exits 78 at
+        # topology build, so the sidecar never starts and the operator ships no
+        # logs at all. Static prefixes would satisfy confinement but change the
+        # label values Loki queries select on. Matches the anyscaled dataplane
+        # sinks, which opt out for the same labels.
+        dangerously_allow_unconfined_template_resolution: true
       az_metrics_sink:
         type: prometheus_remote_write
         inputs:
@@ -116,7 +124,13 @@ data:
       sleep 1
     done
 
-    /usr/bin/vector --watch-config --log-format json --config-yaml /etc/vector/vector.yaml
+    # Vector 0.51.1 removed rate limiting from the internal_logs source, which
+    # feeds raw_vector_logs into sink_loki below. Unset, every repeat of a log
+    # reaches Loki, so a stall on the local endpoint feeds Vector's own retry
+    # errors back into the sink that is failing. This limit is separate from
+    # --internal-log-rate-limit, which only covers stdout/stderr.
+    /usr/bin/vector --watch-config --internal-logs-source-rate-limit 10 \
+      --log-format json --config-yaml /etc/vector/vector.yaml
 kind: ConfigMap
 metadata:
   name: vector

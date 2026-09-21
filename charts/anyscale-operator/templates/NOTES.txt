@@ -1,0 +1,4 @@
+Anyscale Operator {{ .Chart.Version }} installed into namespace {{ .Release.Namespace }}.
+{{ if and .Values.workloads.enableNodeReads .Values.workloads.discoverManagedNamespaces }}
+WARNING: workloads.enableNodeReads does not cover discovered namespaces.
+{{- end }}
