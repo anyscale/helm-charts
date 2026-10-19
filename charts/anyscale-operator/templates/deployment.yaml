@@ -177,8 +177,6 @@ spec:
         resources:
 {{ toYaml .Values.operator.container.resources | indent 10 }}
         env:
-        - name: GIT_SHA
-          value: {{ $operatorImage.tag | quote }}
         {{- if include "anyscale-operator.usePathStyle" . }}
         - name: ANYSCALE_S3_USE_PATH_STYLE
           value: "true"

@@ -56,11 +56,11 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-781e104ec6d4ac246bf4efad65c2980f89dd70c0
+          tag: ci-b85245e59c380520f77b15a1dea444de5a835ae6
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
-          image: vector
-          tag: 0.57.0-debian
+          image: vector_sidecar
+          tag: 0.57.0-f56bdbe15b0a
 
 ################################################################
 # Networking and ingress configuration
@@ -653,7 +653,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-781e104ec6d4ac246bf4efad65c2980f89dd70c0"
+      tag: "ci-b85245e59c380520f77b15a1dea444de5a835ae6"
 
     resources:
       requests:
@@ -677,11 +677,13 @@ operator:
     name: anyscale-operator
   # Vector Sidecar Configuration
   # Vector is a sidecar used to forward telemetry (operator logs/metrics) to the Anyscale Control Plane.
+  # The tag names the image's content, so every release carries the same one until the
+  # image changes; both this and the Azure leg above pull it.
   vector:
     image:
-      registry: "" # empty string means use the default registry (docker.io)
-      image: timberio/vector
-      tag: "0.57.0-debian"
+      registry: us-docker.pkg.dev
+      image: anyscale-artifacts/public/vector_sidecar
+      tag: "0.57.0-f56bdbe15b0a"
 
     resources:
       requests:
