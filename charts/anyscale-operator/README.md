@@ -161,14 +161,14 @@ Use these to pull workload container images from a private registry (e.g. a self
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-781e104ec6d4ac246bf4efad65c2980f89dd70c0` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-b85245e59c380520f77b15a1dea444de5a835ae6` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |
 | `operator.container.additionalEnv` | array | `[]` | Extra env vars appended to the operator container (standard k8s `env` schema: name/value or name/valueFrom), after the built-in env vars, so a colliding name overrides the built-in. Also applied to the pre-install/pre-upgrade instance-types validation hook, which runs the operator image and calls the control plane, so proxy settings take effect during `helm install`/`upgrade` too. For pod-wide env such as an HTTP proxy (HTTP_PROXY/HTTPS_PROXY/NO_PROXY), also set `operator.vector.additionalEnv`. |
-| `operator.vector.image.registry` | string | `""` | Vector sidecar image registry (empty string uses default docker.io) |
-| `operator.vector.image.image` | string | `"timberio/vector"` | Vector sidecar image name |
-| `operator.vector.image.tag` | string | `"0.57.0-debian"` | Vector sidecar image tag |
+| `operator.vector.image.registry` | string | `"us-docker.pkg.dev"` | Vector sidecar image registry |
+| `operator.vector.image.image` | string | `"anyscale-artifacts/public/vector_sidecar"` | Vector sidecar image name |
+| `operator.vector.image.tag` | string | `"0.57.0-f56bdbe15b0a"` | Vector sidecar image tag. Names the image's content, so it changes only when the image does. |
 | `operator.vector.resources.requests.cpu` | string | `"100m"` | Vector sidecar CPU request |
 | `operator.vector.resources.requests.memory` | string | `"512Mi"` | Vector sidecar memory request |
 | `operator.vector.resources.limits.memory` | string | `"512Mi"` | Vector sidecar memory limit |
