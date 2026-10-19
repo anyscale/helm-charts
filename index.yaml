@@ -2,6 +2,19 @@ apiVersion: v1
 entries:
   anyscale-operator:
   - apiVersion: v2
+    created: "2026-10-19T16:33:52.673162554Z"
+    dependencies:
+    - condition: ingress-nginx.enabled
+      name: ingress-nginx
+      repository: https://kubernetes.github.io/ingress-nginx
+      version: 4.13.2
+    description: A Helm chart for Anyscale Operator
+    digest: 21273d05c85ad822cb945c83cd74d7abf48add4a61a7588e1d6dd76cffed1798
+    name: anyscale-operator
+    urls:
+    - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-1.11.0/anyscale-operator-1.11.0.tgz
+    version: 1.11.0
+  - apiVersion: v2
     created: "2026-09-21T23:24:37.950605368Z"
     dependencies:
     - condition: ingress-nginx.enabled
@@ -457,4 +470,4 @@ entries:
     urls:
     - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-0.0.2/anyscale-operator-0.0.2.tgz
     version: 0.0.2
-generated: "2026-09-21T23:24:37.95086587Z"
+generated: "2026-10-19T16:33:52.673526375Z"
