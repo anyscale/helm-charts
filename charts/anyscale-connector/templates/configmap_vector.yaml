@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: connector-vector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: anyscale-connector
+data:
+  vector.yaml: |
+    data_dir: /tmp/vector
+    sources:
+      connector_logs_raw:
+        type: file
+        include:
+          - /tmp/anyscale/logs/*.log
+      connector_metrics_raw:
+        type: prometheus_scrape
+        endpoints:
+          - http://localhost:2112/metrics
+        scrape_interval_secs: 30
+    transforms:
+      connector_logs:
+        type: remap
+        inputs:
+          - connector_logs_raw
+        source: |-
+          # Parse the connector's JSON log line into the event; fall back to a raw
+          # message if it is not JSON.
+          if (parsed, err = parse_json(.message); err == null) {
+            . = parsed
+          } else {
+            msg = .message
+            . = {}
+            .msg = msg
+          }
+          .file = "anyscale-connector"
+          .pod = "${POD_NAME}"
+          .namespace = "${POD_NAMESPACE}"
+          .cloud_id = "{{ .Values.global.cloudId }}"
+          .cloud_resource_id = "{{ .Values.global.cloudResourceId }}"
+      connector_metrics:
+        type: remap
+        inputs:
+          - connector_metrics_raw
+        source: |-
+          .tags.pod = "${POD_NAME}"
+          .tags.namespace = "${POD_NAMESPACE}"
+          .tags.cloud_id = "{{ .Values.global.cloudId }}"
+          .tags.cloud_resource_id = "{{ .Values.global.cloudResourceId }}"
+    sinks:
+      anyscale_logs:
+        type: loki
+        inputs:
+          - connector_logs
+        endpoint: http://localhost:9481
+        encoding:
+          codec: json
+        compression: snappy
+        healthcheck:
+          enabled: false
+        labels:
+          job: anyscale-connector
+          cloud_id: "{{ .Values.global.cloudId }}"
+          cloud_resource_id: "{{ .Values.global.cloudResourceId }}"
+          pod: "${POD_NAME}"
+      anyscale_metrics:
+        type: prometheus_remote_write
+        inputs:
+          - connector_metrics
+        endpoint: http://localhost:9480/api/v1/push
+        healthcheck:
+          enabled: false
+    api:
+      enabled: false

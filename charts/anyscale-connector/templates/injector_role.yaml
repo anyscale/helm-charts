@@ -1,0 +1,15 @@
+{{- if .Values.webhook.manageCerts }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kuberay-telemetry-injector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+rules:
+  # The cert rotator only populates the pre-created serving Secret, so update is enough;
+  # it never creates it. list/watch cannot be scoped to a resourceName.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "update"]
+{{- end }}

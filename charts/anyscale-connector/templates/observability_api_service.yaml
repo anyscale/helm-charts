@@ -1,0 +1,22 @@
+{{- if .Values.observabilityApi.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "anyscale-connector.observabilityApi.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "anyscale-connector.observabilityApi.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.observabilityApi.apiPort }}
+      targetPort: http
+    {{- if .Values.observabilityApi.ingress.enabled }}
+    - name: web
+      port: 80
+      targetPort: web
+    {{- end }}
+{{- end }}

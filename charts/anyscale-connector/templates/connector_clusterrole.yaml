@@ -1,0 +1,41 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  # Namespace suffix supports multiple installs in one cluster without collision.
+  name: anyscale-connector-workloads-{{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+rules:
+  # Cluster-scoped: KubeRay workloads may run in any namespace. Narrow to per-namespace
+  # Roles if your workload namespaces are fixed.
+  - apiGroups: ["ray.io"]
+    resources: ["rayclusters", "rayjobs", "rayservices"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: ["ray.io"]
+    resources: ["rayclusters/status", "rayjobs/status", "rayservices/status"]
+    verbs: ["get", "update", "patch"]
+  # The TLS secret is replicated into every allowed namespace, so a workload there can
+  # reference it. Cluster-scoped for the same reason as the rules above; the sibling
+  # Role only covers the connector's own install namespace.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Head dashboard: manage the Service and Ingress fronting head pods. The TLS Secret
+  # they reference is written by the cert reconciler, which carries its own grant.
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]
+  # Read-only: a head pod's presence is how a live dashboard is told from an orphan.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+  # Workspace storage: the volume a workspace's files, editor state, and git config live
+  # on. A claim normally outlives the cluster that used it, so recreating a workspace
+  # reattaches its data; `delete` is used only when someone explicitly asks for the
+  # storage to be reclaimed along with the workspace.
+  - apiGroups: [""]
+    resources: ["persistentvolumeclaims"]
+    verbs: ["create", "get", "list", "watch", "update", "patch", "delete"]

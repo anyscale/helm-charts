@@ -1,0 +1,121 @@
+{{- if .Values.clusterTelemetry.enabled }}
+# RBAC for the Cluster Telemetry Gateway, bound to the gateway's own ServiceAccount so these
+# grants stay off the connector's identity. Every grant here is read-only and driven by the
+# values that enable it, so collection can only reach what this chart grants -- and you can
+# read exactly that from these rules.
+#
+# Events, pods, and nodes are all cluster-scoped reads (below), because Anyscale controls the
+# event watch scope, workload pods live outside this namespace, and node metrics are
+# irreducibly cluster-scoped.
+# kube-state-metrics holds its own cluster-wide read, so scraping it needs only a namespaced
+# Role like dcgm's.
+{{- $dcgmNamespace := include "anyscale-connector.dcgm.namespace" . }}
+{{- if $dcgmNamespace }}
+---
+# GPU metrics: discovery is scoped to the dcgm-exporter's namespace, so the grants are too.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-dcgm-{{ .Release.Namespace }}
+  namespace: {{ $dcgmNamespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [services, endpoints, pods]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-dcgm-{{ .Release.Namespace }}
+  namespace: {{ $dcgmNamespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-dcgm-{{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "anyscale-connector.clusterTelemetry.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+{{- if .Values.clusterTelemetry.kubeStateMetricsNamespace }}
+---
+# Cluster capacity metrics: scoped to your kube-state-metrics namespace. The scrape discovers
+# the Service itself (not its endpoints), so services is the only read it needs. Names carry
+# the release namespace: two releases can point at the same exporter namespace, and the
+# namespace of these Roles is not the release's, so it cannot disambiguate them.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-ksm-{{ .Release.Namespace }}
+  namespace: {{ .Values.clusterTelemetry.kubeStateMetricsNamespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-ksm-{{ .Release.Namespace }}
+  namespace: {{ .Values.clusterTelemetry.kubeStateMetricsNamespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-ksm-{{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "anyscale-connector.clusterTelemetry.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}
+---
+# The gateway's cluster-scoped reads, all read-only:
+#   events -- the event watch scope is controlled by Anyscale, not this namespace.
+#   nodes  -- kubelet/cAdvisor metrics are only addressable cluster-wide.
+#   pods   -- an event names a pod in any namespace, and the collector reads that pod's
+#             Anyscale labels to file the event under the right cluster.
+# The name is namespace-suffixed so two releases in different namespaces don't collide.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-{{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [get, list, watch]
+  - apiGroups: ["events.k8s.io"]
+    resources: [events]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [nodes, nodes/metrics, nodes/proxy]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch]
+  - nonResourceURLs: ["/metrics", "/metrics/cadvisor"]
+    verbs: [get]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-{{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-{{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "anyscale-connector.clusterTelemetry.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

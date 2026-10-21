@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kuberay-telemetry-injector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  # Routes webhook traffic to the connector pod.
+  selector:
+    {{- include "anyscale-connector.connector.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: https
+      port: 443
+      targetPort: {{ .Values.webhook.port }}
+      protocol: TCP

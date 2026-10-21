@@ -1,0 +1,40 @@
+{{- if .Values.observabilityApi.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "anyscale-connector.observabilityApi.fullname" . }}-vector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+data:
+  vector.yaml: |
+    api:
+      enabled: false
+    data_dir: /tmp/vector
+    sources:
+      obs_api_metrics:
+        type: prometheus_scrape
+        endpoints:
+          - http://localhost:{{ .Values.observabilityApi.apiPort }}/metrics
+        scrape_interval_secs: 15
+    transforms:
+      tagged_metrics:
+        type: remap
+        inputs:
+          - obs_api_metrics
+        source: |-
+          .tags.pod = "${VECTOR_INSTANCE_ID}"
+          .tags.node_ip = "${VECTOR_NODE_IP}"
+          .tags.cloud_id = "{{ .Values.global.cloudId }}"
+          .tags.cloud_resource_id = "{{ required "global.cloudResourceId is required" .Values.global.cloudResourceId }}"
+          .tags.service = "observability_api"
+    sinks:
+      metrics_forwarder:
+        type: prometheus_remote_write
+        inputs:
+          - tagged_metrics
+        endpoint: http://localhost:9483/api/v1/push
+        default_namespace: observability_api
+        healthcheck:
+          enabled: false
+{{- end }}

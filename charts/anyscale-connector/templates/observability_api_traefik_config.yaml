@@ -1,0 +1,48 @@
+{{- if and .Values.observabilityApi.enabled .Values.observabilityApi.ingress.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "anyscale-connector.observabilityApi.fullname" . }}-traefik
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+data:
+  traefik.toml: |
+    [entryPoints]
+      [entryPoints.web]
+        address = ":80"
+    [providers.file]
+      filename = "/etc/traefik/dynamic.toml"
+      watch = true
+  dynamic.toml: |
+    [http.routers.home]
+      rule = "PathPrefix(`/auth`)"
+      service = "home-service"
+      middlewares = ["cors"]
+    [http.routers.finishauth]
+      rule = "PathPrefix(`/authFinish`)"
+      service = "home-service"
+      middlewares = ["cors"]
+    [http.routers.obsapi]
+      rule = "PathPrefix(`/`)"
+      service = "obsapi-service"
+      middlewares = ["cors", "auth", "error-page"]
+    [http.services.home-service.loadBalancer]
+      [[http.services.home-service.loadBalancer.servers]]
+        url = "http://127.0.0.1:9000/"
+    [http.services.obsapi-service.loadBalancer]
+      [[http.services.obsapi-service.loadBalancer.servers]]
+        url = "http://127.0.0.1:{{ .Values.observabilityApi.apiPort }}/"
+    [http.middlewares.auth.forwardAuth]
+      address = "http://127.0.0.1:9000/auth/authorize"
+    [http.middlewares.cors.headers]
+      accessControlAllowMethods = ["GET", "POST", "PUT", "DELETE"]
+      accessControlAllowOriginList = ["{{ .Values.global.controlPlaneAudience }}"]
+      accessControlAllowCredentials = true
+      accessControlAllowHeaders = ["Content-Type", "Authorization"]
+      addVaryHeader = true
+    [http.middlewares.error-page.errors]
+      status = ["502"]
+      service = "home-service"
+      query = "/error_page"
+{{- end }}

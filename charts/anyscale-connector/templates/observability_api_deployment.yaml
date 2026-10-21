@@ -1,0 +1,219 @@
+{{- if .Values.observabilityApi.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "anyscale-connector.observabilityApi.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "anyscale-connector.observabilityApi.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "anyscale-connector.observabilityApi.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Rolls the pod when the Vector config changes.
+        checksum/vector-config: {{ include (print $.Template.BasePath "/observability_api_vector_config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "anyscale-connector.observabilityApi.serviceAccountName" . }}
+      {{- with (include "anyscale-connector.tolerations" (dict "tolerations" .Values.observabilityApi.tolerations "root" .)) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      containers:
+        # Identity and storage config is delivered by Anyscale after install; until then
+        # this container fails closed rather than serving stale data.
+        - name: observability-api
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.observabilityApi.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set observabilityApi.image.tag)") }}
+          imagePullPolicy: {{ .Values.observabilityApi.image.pullPolicy }}
+          command: ["/app/go/infra/observability_api/observability_api"]
+          env:
+            - name: ANYSCALE_CLOUD_ID
+              value: {{ .Values.global.cloudId | quote }}
+            - name: ANYSCALE_ORGANIZATION_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: org
+                  optional: true
+            - name: ANYSCALE_OBSERVABILITY_BUCKET_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: bucketUri
+                  optional: true
+            - name: ANYSCALE_CLOUD_STORAGE_BUCKET_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: region
+                  optional: true
+            # S3-compatible endpoint override, delivered in connector-config rather than
+            # cluster-telemetry-config.
+            - name: AWS_ENDPOINT_URL_S3
+              valueFrom:
+                configMapKeyRef:
+                  name: connector-config
+                  key: endpoint
+                  optional: true
+            - name: ANYSCALE_OBSERVABILITY_API_PORT
+              value: {{ .Values.observabilityApi.apiPort | quote }}
+            - name: ANYSCALE_OBSERVABILITY_MEMORY_LIMIT_BYTES
+              valueFrom:
+                resourceFieldRef:
+                  resource: limits.memory
+                  divisor: "1"
+          ports:
+            - name: http
+              containerPort: {{ .Values.observabilityApi.apiPort }}
+          livenessProbe:
+            httpGet: { path: /activity, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: { path: /activity, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.observabilityApi.resources | nindent 12 }}
+          volumeMounts:
+            - name: obs-tmp
+              mountPath: /tmp/anyscale/observability
+        # Attaches the projected token on egress to Anyscale.
+        - name: forwarder
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.forwarder.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set forwarder.image.tag)") }}
+          imagePullPolicy: {{ .Values.forwarder.image.pullPolicy }}
+          env:
+            - name: CONTROL_PLANE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: host
+          args:
+            - --control-plane-host=$(CONTROL_PLANE_HOST)
+            - --cloud-resource-id={{ .Values.global.cloudResourceId }}
+            # Second listener, for this API's own metrics. Same host as above unless
+            # Anyscale gave you a separate one.
+            {{- with .Values.clusterTelemetry.internalMetricsHost }}
+            - --internal-metrics-host={{ . }}
+            {{- else }}
+            - --internal-metrics-host=$(CONTROL_PLANE_HOST)
+            {{- end }}
+          ports:
+            - name: fwd-health
+              containerPort: 13133
+          livenessProbe:
+            httpGet: { path: /healthz, port: fwd-health }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: { path: /ready, port: fwd-health }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: anyscale-token
+              mountPath: /var/run/secrets/anyscale
+              readOnly: true
+        # Ships this API's own metrics out through the forwarder sidecar above.
+        - name: vector
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.vector.image "fallbackRegistry" .Values.global.image.registry "tagError" "vector.image.tag is required") }}
+          imagePullPolicy: {{ .Values.vector.image.pullPolicy }}
+          args: ["--config-dir", "/etc/vector"]
+          env:
+            - name: VECTOR_NODE_IP
+              valueFrom: { fieldRef: { fieldPath: status.hostIP } }
+            - name: VECTOR_INSTANCE_ID
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            # Vector 0.57 skips ${VAR} interpolation in config files by default, and
+            # logs nothing when it does, so the two tags above would ship as literal
+            # text. Remove once the config drops ${VAR}.
+            - name: VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION
+              value: "true"
+          volumeMounts:
+            - name: vector-config
+              mountPath: /etc/vector
+              readOnly: true
+            - name: vector-data
+              mountPath: /tmp/vector
+        {{- if .Values.observabilityApi.ingress.enabled }}
+        - name: authentication-gateway
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.observabilityApi.ingress.authGateway.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set observabilityApi.ingress.authGateway.image.tag)") }}
+          imagePullPolicy: {{ .Values.observabilityApi.ingress.authGateway.image.pullPolicy }}
+          command: ["/app/go/infra/authentication_gateway/authentication_gateway"]
+          ports:
+            - name: auth
+              containerPort: 9000
+          env:
+            - name: ANYSCALE_AUTH_SERVER_ADDR
+              value: "127.0.0.1:9000"
+            - name: ANYSCALE_CLUSTER_ID
+              value: {{ .Values.global.cloudResourceId | quote }}
+            # Anyscale delivers these in cluster-telemetry-config, so the gateway verifies
+            # against the key Anyscale actually signs with rather than a hand-set one. Required
+            # keys hold the sidecar until they land; infra provider is optional (absent ->
+            # binary default).
+            - name: ANYSCALE_PUBLIC_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: authPublicKey
+            - name: ANYSCALE_DEPLOY_ENVIRONMENT
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: deployEnv
+            - name: ANYSCALE_DEPLOY_INFRA_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: deployInfraProvider
+                  optional: true
+            - name: ANYSCALE_GLOBAL_CONTROL_PLANE
+              value: {{ .Values.global.controlPlaneAudience | quote }}
+            - name: ANYSCALE_ENABLE_VALIDATION_CHECK
+              value: "0"
+            - name: GODEBUG
+              value: "tlsmlkem=0"
+        - name: traefik
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.observabilityApi.ingress.traefik.image "tagError" "observabilityApi.ingress.traefik.image.tag is required") }}
+          imagePullPolicy: {{ .Values.observabilityApi.ingress.traefik.image.pullPolicy }}
+          args: ["--configfile=/etc/traefik/traefik.toml"]
+          ports:
+            - name: web
+              containerPort: 80
+          volumeMounts:
+            - name: obs-traefik-config
+              mountPath: /etc/traefik
+              readOnly: true
+        {{- end }}
+      volumes:
+        - name: obs-tmp
+          emptyDir:
+            sizeLimit: 20Gi
+        {{- if .Values.observabilityApi.ingress.enabled }}
+        - name: obs-traefik-config
+          configMap:
+            name: {{ include "anyscale-connector.observabilityApi.fullname" . }}-traefik
+        {{- end }}
+        - name: anyscale-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: {{ include "anyscale-connector.tokenAudience" . }}
+                  expirationSeconds: 3600
+                  path: token
+        - name: vector-config
+          configMap:
+            name: {{ include "anyscale-connector.observabilityApi.fullname" . }}-vector
+        - name: vector-data
+          emptyDir: {}
+{{- end }}
