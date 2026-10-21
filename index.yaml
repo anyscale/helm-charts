@@ -1,5 +1,30 @@
 apiVersion: v1
 entries:
+  anyscale-connector:
+  - apiVersion: v2
+    appVersion: 0.1.0
+    created: "2026-10-21T20:40:06.482112017Z"
+    dependencies:
+    - condition: kuberay-operator.enabled
+      name: kuberay-operator
+      repository: https://ray-project.github.io/kuberay-helm/
+      version: 1.7.0
+    - condition: dcgm-exporter.enabled
+      name: dcgm-exporter
+      repository: https://nvidia.github.io/dcgm-exporter/helm-charts
+      version: 4.7.1
+    description: 'Private preview; contact Anyscale before use. Not self-service:
+      Anyscale supplies your values and tells you when to upgrade. Versions below
+      1.0 may change incompatibly in any release, including patch releases, so pin
+      an exact --version. Connects a Kubernetes cluster to Anyscale: reports connector
+      health and injects telemetry into KubeRay workloads; the Cluster Telemetry Gateway
+      and Observability API are optional.'
+    digest: d52ee8e27ff673c341ee825f2964bf3413fdf3d34daaf2c080e745f4e165e6c5
+    name: anyscale-connector
+    type: application
+    urls:
+    - https://github.com/anyscale/helm-charts/releases/download/anyscale-connector-0.1.0/anyscale-connector-0.1.0.tgz
+    version: 0.1.0
   anyscale-operator:
   - apiVersion: v2
     created: "2026-10-19T16:33:52.673162554Z"
@@ -470,4 +495,4 @@ entries:
     urls:
     - https://github.com/anyscale/helm-charts/releases/download/anyscale-operator-0.0.2/anyscale-operator-0.0.2.tgz
     version: 0.0.2
-generated: "2026-10-19T16:33:52.673526375Z"
+generated: "2026-10-21T20:40:06.482195422Z"
