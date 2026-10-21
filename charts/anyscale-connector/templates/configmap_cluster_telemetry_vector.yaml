@@ -1,0 +1,62 @@
+{{- if .Values.clusterTelemetry.enabled }}
+# Vector config for the gateway: forwards the collector's own logs to Anyscale.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-vector
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+data:
+  vector.yaml: |
+    data_dir: /tmp/vector
+    sources:
+      # Loopback only. Vector requires the gRPC listener; only HTTP is used.
+      gateway_otlp:
+        type: opentelemetry
+        grpc:
+          address: 127.0.0.1:4317
+        http:
+          address: 127.0.0.1:4318
+    transforms:
+      gateway_logs:
+        type: remap
+        inputs:
+          - gateway_otlp.logs
+        source: |-
+          # Flatten the OTLP record: component identity (scope), its log fields,
+          # plus msg and level.
+          event = merge(object(.scope.attributes) ?? {}, object(.attributes) ?? {})
+          event.msg = .message
+          event.level = downcase(string(.severity_text) ?? "")
+          event.timestamp = .timestamp
+          . = event
+          .file = "cluster-telemetry-gateway"
+          .pod = "${POD_NAME}"
+          .namespace = "${POD_NAMESPACE}"
+          .cloud_id = "{{ .Values.global.cloudId }}"
+          .cloud_resource_id = "{{ .Values.global.cloudResourceId }}"
+    sinks:
+      anyscale_logs:
+        type: loki
+        inputs:
+          - gateway_logs
+        endpoint: http://localhost:9481
+        encoding:
+          codec: json
+        compression: snappy
+        # Holds logs on disk through egress outages and Vector restarts. Uses up to
+        # 256MiB of node ephemeral storage (Vector's minimum disk buffer).
+        buffer:
+          type: disk
+          max_size: 268435488
+        healthcheck:
+          enabled: false
+        labels:
+          job: cluster-telemetry-gateway
+          cloud_id: "{{ .Values.global.cloudId }}"
+          cloud_resource_id: "{{ .Values.global.cloudResourceId }}"
+          pod: "${POD_NAME}"
+    api:
+      enabled: false
+{{- end }}

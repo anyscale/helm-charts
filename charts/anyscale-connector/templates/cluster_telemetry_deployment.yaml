@@ -1,0 +1,178 @@
+{{- if .Values.clusterTelemetry.enabled }}
+# The Cluster Telemetry Gateway: one collector that ships Kubernetes cluster events to
+# your Anyscale storage bucket and scrapes cluster metrics, plus a forwarder sidecar that
+# authenticates the egress. Its config is delivered by Anyscale after install into the
+# cluster-telemetry-config ConfigMap.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "anyscale-connector.clusterTelemetry.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "anyscale-connector.clusterTelemetry.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Vector is listed first; keep `kubectl logs` on the collector.
+        kubectl.kubernetes.io/default-container: collector
+    spec:
+      # The gateway's own ServiceAccount, so its cluster-wide node/pod read is not also
+      # granted to the connector, and the connector's write permissions are not granted here.
+      serviceAccountName: {{ include "anyscale-connector.clusterTelemetry.serviceAccountName" . }}
+      {{- with (include "anyscale-connector.tolerations" (dict "tolerations" .Values.clusterTelemetry.tolerations "root" .)) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      initContainers:
+        # Validate the config before the collector starts; kubelet retries with backoff
+        # until the ConfigMap is populated (optional volume, so absent = empty).
+        - name: validate-config
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.clusterTelemetry.collector.image "tagError" "clusterTelemetry.collector.image.tag is required") }}
+          imagePullPolicy: {{ .Values.clusterTelemetry.collector.image.pullPolicy }}
+          command: ["/otelcol-contrib", "validate", "--config=/etc/otel/config.yaml"]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+          volumeMounts:
+            - name: telemetry-config
+              mountPath: /etc/otel
+              readOnly: true
+      containers:
+        # Ships the collector's own logs (no workload data) to Anyscale for support.
+        # Starts first; postStart waits until it listens, so collector startup logs
+        # are kept. Bounded, and never fails the pod.
+        - name: vector
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.vector.image "fallbackRegistry" .Values.global.image.registry "tagError" "vector.image.tag is required") }}
+          imagePullPolicy: {{ .Values.vector.image.pullPolicy }}
+          command: ["/usr/bin/vector"]
+          args:
+            - --config-yaml
+            - /etc/vector/vector.yaml
+          env:
+            - name: POD_NAME
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+            # Vector 0.57 skips ${VAR} interpolation in config files by default, and
+            # logs nothing when it does, so the config's ${POD_NAME}/${POD_NAMESPACE}
+            # tags would ship as literal text. Remove once the config drops ${VAR}.
+            - name: VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION
+              value: "true"
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/bin/bash", "-c", "for _ in {1..30}; do (: </dev/tcp/127.0.0.1/4318) 2>/dev/null && exit 0; sleep 1; done"]
+          resources:
+{{ toYaml .Values.clusterTelemetry.vector.resources | indent 12 }}
+          volumeMounts:
+            - name: vector-config
+              mountPath: /etc/vector/
+              readOnly: true
+            - name: vector-state
+              mountPath: /tmp/vector
+        - name: collector
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.clusterTelemetry.collector.image "tagError" "clusterTelemetry.collector.image.tag is required") }}
+          imagePullPolicy: {{ .Values.clusterTelemetry.collector.image.pullPolicy }}
+          args: ["--config=/etc/otel/config.yaml"]
+          env:
+            - name: POD_NAMESPACE
+              valueFrom: { fieldRef: { fieldPath: metadata.namespace } }
+          ports:
+            - name: health
+              containerPort: 13134   # health_check extension (13133 belongs to the forwarder)
+          livenessProbe:
+            httpGet: { path: /, port: health }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: { path: /, port: health }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: telemetry-config
+              mountPath: /etc/otel
+              readOnly: true
+        # Authenticated telemetry egress: the collector remote-writes to
+        # localhost:9480 with no credentials; the forwarder attaches the projected
+        # token on egress to Anyscale.
+        - name: forwarder
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.forwarder.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set forwarder.image.tag)") }}
+          imagePullPolicy: {{ .Values.forwarder.image.pullPolicy }}
+          env:
+            # Egress host, delivered by Anyscale in the same ConfigMap as the collector
+            # config. Deliberately NOT optional: Kubernetes substitutes $(CONTROL_PLANE_HOST) in
+            # args only when the env var exists, so an optional ref would pass the literal
+            # "$(CONTROL_PLANE_HOST)" through as a hostname and the forwarder's empty-value check
+            # would not catch it. Required means the container reports
+            # CreateContainerConfigError and kubelet retries until the key lands.
+            - name: CONTROL_PLANE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: cluster-telemetry-config
+                  key: host
+          args:
+            - --control-plane-host=$(CONTROL_PLANE_HOST)
+            - --cloud-resource-id={{ .Values.global.cloudResourceId }}
+            # Second listener, for the gateway's own logs. Same host as above unless
+            # Anyscale gave you a separate one.
+            {{- with .Values.clusterTelemetry.logsHost }}
+            - --internal-logs-host={{ . }}
+            {{- else }}
+            - --internal-logs-host=$(CONTROL_PLANE_HOST)
+            {{- end }}
+            # Third listener, for the KubeRay workload events the collector exports. Same
+            # host as above unless Anyscale gave you a separate one.
+            {{- with .Values.clusterTelemetry.eventsHost }}
+            - --kcp-events-host={{ . }}
+            {{- else }}
+            - --kcp-events-host=$(CONTROL_PLANE_HOST)
+            {{- end }}
+            # Fourth listener, for the collector's own metrics. Same host as above
+            # unless Anyscale gave you a separate one.
+            {{- with .Values.clusterTelemetry.internalMetricsHost }}
+            - --internal-metrics-host={{ . }}
+            {{- else }}
+            - --internal-metrics-host=$(CONTROL_PLANE_HOST)
+            {{- end }}
+          ports:
+            - name: fwd-health
+              containerPort: 13133
+          livenessProbe:
+            httpGet: { path: /healthz, port: fwd-health }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet: { path: /ready, port: fwd-health }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: anyscale-token
+              mountPath: /var/run/secrets/anyscale
+              readOnly: true
+      volumes:
+        # Collector config + forwarder egress host, delivered by Anyscale after install
+        # (optional so the pod still schedules); the validate init container holds the
+        # collector until it lands.
+        - name: telemetry-config
+          configMap:
+            name: cluster-telemetry-config
+            optional: true
+        - name: vector-config
+          configMap:
+            name: {{ include "anyscale-connector.clusterTelemetry.fullname" . }}-vector
+        - name: vector-state
+          emptyDir: {}
+        - name: anyscale-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: {{ include "anyscale-connector.tokenAudience" . }}
+                  expirationSeconds: 3600
+                  path: token
+{{- end }}

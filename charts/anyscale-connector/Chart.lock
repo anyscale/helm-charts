@@ -1,0 +1,9 @@
+dependencies:
+- name: kuberay-operator
+  repository: https://ray-project.github.io/kuberay-helm/
+  version: 1.7.0
+- name: dcgm-exporter
+  repository: https://nvidia.github.io/dcgm-exporter/helm-charts
+  version: 4.7.1
+digest: sha256:3728da72399013986bbc26ba5a45c7cc28884a1cd0227bb5481f86c093b14e2c
+generated: "2026-09-14T20:12:49.87581083Z"

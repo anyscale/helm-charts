@@ -1,0 +1,330 @@
+# Values for the Anyscale Connector chart.
+#
+# Private preview; contact Anyscale before use. Not self-service: Anyscale supplies your
+# values and tells you when to upgrade. Versions below 1.0 may change incompatibly in any
+# release, including patch releases, so pin an exact --version.
+
+# ── Identity and endpoint ───────────────────────────────────────────────────
+# Shared settings, used by every component in this chart.
+global:
+  # The Anyscale URL your token audiences are issued against.
+  controlPlaneAudience: https://console.anyscale.com
+  # Your Anyscale cloud id (cld_...). Required.
+  cloudId: ""
+  # The cloud resource this connector reports for (cldrsrc_...). Required.
+  cloudResourceId: ""
+
+  # Registry and release tag every Anyscale-built image in this chart (connector,
+  # forwarder, Observability API, auth gateway) pulls by default, so a normal install, or
+  # one pulling from a mirror, sets them once here; the vector sidecar follows the registry
+  # only. A component's own image.registry or image.tag, when set, wins for that component.
+  image:
+    registry: us-docker.pkg.dev/anyscale-artifacts/public
+    # Anyscale release tag. Required.
+    tag: "ci-db993ada04558c4fbf2834f64f2c758ffbc87643"
+
+  # Every component egresses to one host, derived as <cloudId>.<controlPlaneDomain>:443
+  # with the cloud id lowercased and underscores turned to hyphens. Run `helm template`
+  # to see the resolved value -- that is the host to allowlist for outbound traffic.
+  controlPlaneDomain: anyscale-cloud.dev
+
+  # Set to dial a specific host:port instead of the derived one. Leave empty unless
+  # Anyscale has told you the derived host does not apply to your deployment.
+  controlPlaneHost: ""
+
+  # Namespaces where RayJobs are tracked by Anyscale
+  allowedNamespaces: []
+
+  # IngressClass for the Ingresses Anyscale creates for your workloads. Empty uses your
+  # cluster's default IngressClass; set this if your cluster marks none default. A
+  # workload can override it with an anyscale.com/ingress-class-name annotation.
+  ingressClassName: ""
+
+  # Tolerations applied to every pod this chart creates. Each component below can set
+  # its own list to replace this one.
+  #
+  # tolerations:
+  #   - key: node.anyscale.com/capacity-type
+  #     operator: Exists
+  #     effect: NoSchedule
+  tolerations: []
+
+# ── Connector ───────────────────────────────────────────────────────────────
+connector:
+  # ServiceAccount for the connector.
+  serviceAccount:
+    # Together with the release namespace it must match the service account registered
+    # with Anyscale, which validates the token subject against that registration.
+    name: anyscale-connector
+
+    # Annotations binding the identity the connector uses for its object-storage calls:
+    # it lists your log bucket and signs URLs for the objects in it. The observabilityApi
+    # and clusterTelemetry sections below take their own. The key depends on your platform:
+    #   For EKS, eks.amazonaws.com/role-arn set to the ARN of the IAM role.
+    #   For GKE, iam.gke.io/gcp-service-account set to the email of the service account.
+    # If not set, the connector will use the identity of the Kubernetes node.
+    annotations: {}
+
+  # Tolerations for the connector pod, replacing global.tolerations when set.
+  tolerations: []
+
+  # Connector image. An empty registry or tag follows global.image.registry and
+  # global.image.tag; set one only to pin this image independently.
+  image:
+    registry: ""
+    repository: kuberay_connector
+    tag: ""
+    pullPolicy: Always
+
+  # Where the connector ships its own metrics and logs. Empty dials the control-plane host,
+  # which Anyscale routes to the right backend; set these only if Anyscale gives you
+  # dedicated hosts (no port; the egress hop is always :443).
+  metricsHost: ""
+  logsHost: ""
+
+  # Plain-HTTP port the connector serves its liveness and readiness probes on. Change it
+  # only if 8081 is taken by something else sharing the pod's network, such as a sidecar.
+  healthPort: 8081
+
+  # Vector sidecar that ships the connector's logs and metrics to Anyscale; its image is the
+  # top-level vector.image.
+  vector:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+# ── Forwarder ───────────────────────────────────────────────────────────────
+# Forwarder sidecar. One image, shipped beside both the Cluster Telemetry Gateway and the
+# Observability API -- the same binary in both, so it is defined once here rather than per
+# component. Released with the connector: an empty registry or tag follows
+# global.image.registry and global.image.tag; set one only to pin this image independently.
+forwarder:
+  image:
+    registry: ""
+    repository: forwarder
+    tag: ""
+    pullPolicy: Always
+
+# ── Vector ──────────────────────────────────────────────────────────────────
+# Vector sidecar image. One image, run beside the connector, the Cluster Telemetry Gateway and
+# the Observability API, so it is defined once here rather than per component. An empty
+# registry follows global.image.registry. The tag names the image's content, so every release
+# carries the same one until the image changes; a mirror must carry this tag.
+vector:
+  image:
+    registry: ""
+    repository: vector_sidecar
+    tag: "0.57.0-f56bdbe15b0a"
+    pullPolicy: IfNotPresent
+
+# ── Webhook ─────────────────────────────────────────────────────────────────
+webhook:
+  # true = the webhook TLS cert is managed in-cluster; false = you provide certSecretName + caBundle.
+  manageCerts: true
+
+  # Base64 CA bundle for the webhook; required when manageCerts=false (unless injected by cert-manager).
+  caBundle: ""
+
+  # Existing TLS Secret to mount for the webhook; required when manageCerts=false.
+  certSecretName: ""
+
+  # HTTPS port the webhook server listens on.
+  port: 8443
+
+  # Fail, not Ignore: if Anyscale is unreachable, Ignore would admit RayJobs that then
+  # never report status. Blocking creation is recoverable; a silent status stall is not.
+  failurePolicy: Fail
+
+# ── Cluster Telemetry Gateway ───────────────────────────────────────────────
+# One extra pod that ships Kubernetes cluster events to your Anyscale storage bucket
+# and scrapes cluster metrics. Anyscale derives and delivers its whole configuration
+# (identity, storage, scrape targets, event watch scope) after install, so the only
+# settings here are the exporter namespaces, scheduling, and the images.
+clusterTelemetry:
+  # false disables the gateway entirely: no pod, no RBAC, no event or metric collection.
+  enabled: true
+
+  # The gateway's own ServiceAccount. Its name is derived from the release, so only
+  # annotations are settable.
+  serviceAccount:
+    # Binds the identity its collector uses to upload cluster events to your bucket.
+    # Same keys as connector.serviceAccount.annotations above. If not set, the gateway will use the
+    # identity of the Kubernetes node, and a rejected upload stops events landing with no
+    # error surfaced anywhere.
+    annotations: {}
+
+  # Namespace of your dcgm-exporter Service, for GPU metrics. Empty disables GPU scraping and
+  # its RBAC, unless the dcgm-exporter subchart below is enabled: then the gateway scrapes that
+  # install. Set this only for an exporter you run yourself; the NVIDIA GPU Operator's default
+  # namespace is "gpu-operator".
+  dcgmNamespace: ""
+
+  # Name of your dcgm-exporter Service, matched exactly; empty means "nvidia-dcgm-exporter",
+  # what the GPU Operator creates, or the subchart's own Service when it is enabled.
+  dcgmServiceName: ""
+
+  # Namespace of your kube-state-metrics Service, for cluster capacity metrics. Empty disables
+  # that scrape and its RBAC. Install kube-state-metrics yourself, Anyscale does not. Run it with
+  #   --metric-labels-allowlist=nodes=[node.kubernetes.io/instance-type,nvidia.com/gpu.product]
+  # so node instance types and GPU models are reported, and leave its autosharding off: the
+  # scrape addresses the Service, so a sharded install reports one shard's share of the cluster.
+  kubeStateMetricsNamespace: ""
+
+  # Name of your kube-state-metrics Service, matched exactly. Empty means "kube-state-metrics".
+  kubeStateMetricsServiceName: ""
+
+  # Tolerations for the gateway pod, replacing global.tolerations when set.
+  tolerations: []
+
+  # Host the gateway sends its own logs to. Empty follows the egress host Anyscale
+  # delivers after install; override only if Anyscale told you to.
+  logsHost: ""
+
+  # Host the gateway sends KubeRay workload events to. Empty follows the egress host
+  # Anyscale delivers after install; override only if Anyscale told you to.
+  eventsHost: ""
+
+  # Host the gateway and the Observability API send their own metrics to. Empty follows
+  # the egress host Anyscale delivers after install; override only if Anyscale told you to.
+  internalMetricsHost: ""
+
+  # OpenTelemetry Collector. Third-party (not built by Anyscale), so it carries its own
+  # registry and pinned tag rather than following global.image.registry and
+  # global.image.tag. Repoint registry/repository at a mirror or private registry if your
+  # cluster cannot pull from Docker Hub. The tag must support the S3 exporter's dynamic
+  # prefixes (newer than 0.116); never use "latest".
+  collector:
+    image:
+      registry: docker.io
+      repository: otel/opentelemetry-collector-contrib
+      tag: "0.154.0"
+      pullPolicy: IfNotPresent
+
+  # Vector ships the gateway's own logs to Anyscale for support and debugging; its image is
+  # the top-level vector.image.
+  vector:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+# ── Observability API ───────────────────────────────────────────────────────
+# Serves Ray observability data to the console, plus a forwarder sidecar that ships
+# its own metrics out. A heavy component: it reserves 8Gi.
+observabilityApi:
+  # false disables the API entirely: no pod, no Service, no RBAC.
+  enabled: true
+
+  # The API's own ServiceAccount. Its name is derived from the release, so only
+  # annotations are settable.
+  serviceAccount:
+    # Binds the identity it uses to download observability data from your bucket. Same
+    # keys as connector.serviceAccount.annotations above. If not set, the API will use the identity
+    # of the Kubernetes node.
+    annotations: {}
+
+  # Inbound exposure for the console: fronts the API with an authentication gateway
+  # and proxy behind a per-cloud Ingress at obs-<cloudResourceId>.i.<dynamicHttpsDomain>.
+  # Both this and `enabled` above must be on for the console to show telemetry.
+  ingress:
+    enabled: true
+    # Suffix of the per-cloud obs host; the console-visible host is
+    # obs-<cloudResourceId>.i.<dynamicHttpsDomain>. Must match the domain the Anyscale
+    # control plane serves; override only if Anyscale gave you a different one.
+    dynamicHttpsDomain: anyscaleuserdata.com
+    # TLS secret for the host; defaults to the per-cloud-resource certificate. Anyscale
+    # provisions that certificate only into the cloud's allowed namespaces, so install the
+    # chart into one of them or set this to a secret that exists in the release namespace.
+    tlsSecretName: ""
+    # Ingress class fronting the host (the cluster's nginx ingress).
+    className: nginx
+    # Authentication gateway fronting the API: verifies the access token for this
+    # cloud resource and sets the console session cookie. An empty registry or tag follows
+    # global.image.registry and global.image.tag; set one only to pin this image
+    # independently.
+    authGateway:
+      image:
+        registry: ""
+        repository: authn
+        tag: ""
+        pullPolicy: Always
+    # Front-proxy image (traefik v3).
+    traefik:
+      image:
+        registry: docker.io
+        repository: traefik
+        tag: "v3.7.15"
+        pullPolicy: IfNotPresent
+
+  # Port the API server listens on.
+  apiPort: 8080
+
+  # The API sizes its in-process store from the memory limit, so keep requests == limits.
+  resources:
+    limits:
+      memory: 8Gi
+    requests:
+      memory: 8Gi
+
+  # Tolerations for the API pod, replacing global.tolerations when set.
+  tolerations: []
+
+  # Observability API image. Built and released with the connector: an empty registry or
+  # tag follows global.image.registry and global.image.tag; set one only to pin this image
+  # independently.
+  image:
+    registry: ""
+    repository: observability_api
+    tag: ""
+    pullPolicy: Always
+
+# ── Optional subcharts ──────────────────────────────────────────────────────
+# Both off: enable one only on a cluster that does not already run it (see README.md). Each block
+# is that subchart's own values file. The subcharts read their own tolerations, not
+# global.tolerations, so set theirs here.
+
+# KubeRay operator, at the version pinned in Chart.yaml. Helm never upgrades its ray.io CRDs
+# after the first install; README.md has the upgrade step.
+kuberay-operator:
+  enabled: false
+
+# NVIDIA dcgm-exporter for GPU metrics. Enabled, the gateway scrapes it: leave
+# clusterTelemetry.dcgmNamespace empty.
+dcgm-exporter:
+  enabled: false
+
+  # A ServiceMonitor needs the Prometheus Operator CRDs; the gateway scrapes the Service directly.
+  serviceMonitor:
+    enabled: false
+
+  # Runs only on nodes carrying a well-known GPU label (GPU Operator/GFD, GKE, EKS accelerated
+  # AMIs, Karpenter): without the NVIDIA driver the exporter crash-loops. Swap in your own label
+  # if your GPU nodes carry none of these.
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values: ["true"]
+          - matchExpressions:
+              - key: cloud.google.com/gke-accelerator
+                operator: Exists
+          - matchExpressions:
+              - key: k8s.amazonaws.com/accelerator
+                operator: Exists
+          - matchExpressions:
+              - key: karpenter.k8s.aws/instance-gpu-manufacturer
+                operator: Exists
+
+  # Replaces the upstream list (control-plane nodes only); add your GPU pool's taint if it differs.
+  tolerations:
+    - key: nvidia.com/gpu
+      operator: Exists
+      effect: NoSchedule

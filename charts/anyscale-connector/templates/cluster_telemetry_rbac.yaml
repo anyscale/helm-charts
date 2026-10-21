@@ -1,0 +1,48 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: anyscale-connector-telemetry
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+rules:
+  # Apply the ConfigMaps Anyscale renders. create can't be name-scoped, so it is a separate
+  # rule; get/patch stay restricted to the two ConfigMaps. Ungated because connector-config
+  # ships whether or not the gateway is installed; the object names keep "telemetry" so an
+  # upgrade patches them in place rather than recreating the binding.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["connector-config", "cluster-telemetry-config"]
+    verbs: ["get", "patch"]
+  {{- if .Values.clusterTelemetry.enabled }}
+  # Read back the gateway config to check it is current. The read selects the ConfigMap by
+  # name, which is what lets list be scoped to it.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    resourceNames: ["cluster-telemetry-config"]
+    verbs: ["list"]
+  # Restart the gateway when its config changes, by updating one annotation on its pod template.
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: [{{ include "anyscale-connector.clusterTelemetry.fullname" . | quote }}]
+    verbs: ["patch"]
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: anyscale-connector-telemetry
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: anyscale-connector-telemetry
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.connector.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}

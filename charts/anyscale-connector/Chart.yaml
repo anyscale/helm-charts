@@ -1,0 +1,20 @@
+apiVersion: v2
+name: anyscale-connector
+description: >-
+  Private preview; contact Anyscale before use. Not self-service: Anyscale supplies your
+  values and tells you when to upgrade. Versions below 1.0 may change incompatibly in any
+  release, including patch releases, so pin an exact --version. Connects a Kubernetes
+  cluster to Anyscale: reports connector health and injects telemetry into KubeRay
+  workloads; the Cluster Telemetry Gateway and Observability API are optional.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+dependencies:
+  - name: kuberay-operator
+    version: "1.7.0"
+    repository: "https://ray-project.github.io/kuberay-helm/"
+    condition: kuberay-operator.enabled
+  - name: dcgm-exporter
+    version: "4.7.1"
+    repository: "https://nvidia.github.io/dcgm-exporter/helm-charts"
+    condition: dcgm-exporter.enabled

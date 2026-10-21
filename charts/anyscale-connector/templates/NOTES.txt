@@ -1,0 +1,16 @@
+{{- /*
+Printed by helm install, upgrade and status. The private-preview paragraph is the same blurb
+as the Chart.yaml description, the README banner and the values.yaml header; change all four
+together.
+*/ -}}
+anyscale-connector {{ .Chart.Version }} is installed in namespace {{ .Release.Namespace }}.
+
+Private preview; contact Anyscale before use. Not self-service: Anyscale supplies your
+values and tells you when to upgrade. Versions below 1.0 may change incompatibly in any
+release, including patch releases, so pin an exact --version.
+
+Outbound endpoint to allowlist; every component dials it:
+  {{ include "anyscale-connector.controlPlaneHost" . }}
+
+Anyscale delivers the remaining configuration after install; pods that depend on it wait
+until it lands. Questions: your Anyscale account team, or support@anyscale.com.

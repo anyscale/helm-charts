@@ -1,0 +1,83 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  # Cluster-scoped, so the name is namespace-suffixed to let multiple connector
+  # installs (one per cloud) coexist in a cluster without clobbering each other.
+  name: kuberay-telemetry-injector-{{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+webhooks:
+  # One entry per (resource, operation). The operations carry different failure
+  # policies: a CREATE that cannot reach Anyscale must not be admitted, while a DELETE
+  # is only a teardown notification and must never block your delete.
+  #
+  # RayJob and RayCluster need separate entries rather than one rule listing both,
+  # because matchConditions are per-webhook and the two kinds are selected on different
+  # things -- an embedded cluster spec vs the workspace annotation.
+  {{- $hooks := list
+        (dict "name" "inject.telemetry.anyscale.com" "resource" "rayjobs" "operation" "CREATE" "failurePolicy" .Values.webhook.failurePolicy)
+        (dict "name" "teardown.telemetry.anyscale.com" "resource" "rayjobs" "operation" "DELETE" "failurePolicy" "Ignore")
+        (dict "name" "inject-workspace.telemetry.anyscale.com" "resource" "rayclusters" "operation" "CREATE" "failurePolicy" .Values.webhook.failurePolicy)
+        (dict "name" "teardown-workspace.telemetry.anyscale.com" "resource" "rayclusters" "operation" "DELETE" "failurePolicy" "Ignore") }}
+  {{- range $hook := $hooks }}
+  - name: {{ $hook.name }}
+    admissionReviewVersions: ["v1"]
+    # The webhook records the workload with Anyscale as a side effect of admission,
+    # except on dry-run, which the connector short-circuits without calling Anyscale.
+    sideEffects: NoneOnDryRun
+    failurePolicy: {{ $hook.failurePolicy }}
+    timeoutSeconds: 10
+    clientConfig:
+      service:
+        name: kuberay-telemetry-injector
+        namespace: {{ $.Release.Namespace }}
+        path: /mutate
+        port: 443
+      {{- if $.Values.webhook.manageCerts }}
+      # caBundle intentionally omitted: the in-cluster cert rotator sets it, and
+      # any value here would go stale on rotation.
+      {{- else }}
+      # Operator-supplied CA. With cert-manager, drop webhook.caBundle and annotate:
+      #   cert-manager.io/inject-ca-from: <namespace>/<certificate-name>
+      caBundle: {{ $.Values.webhook.caBundle }}
+      {{- end }}
+    rules:
+      - apiGroups: ["ray.io"]
+        apiVersions: ["v1"]
+        resources: ["{{ $hook.resource }}"]
+        operations: ["{{ $hook.operation }}"]
+        scope: Namespaced
+    # Only intercept workloads in global.allowedNamespaces; defaults to the connector's own
+    # namespace when unset.
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: In
+          values:
+            {{- if $.Values.global.allowedNamespaces }}
+            {{- range $.Values.global.allowedNamespaces }}
+            - {{ . }}
+            {{- end }}
+            {{- else }}
+            - {{ $.Release.Namespace }}
+            {{- end }}
+    # Requires Kubernetes >= 1.28, the supported floor: on older clusters matchConditions
+    # are ignored and a RayCluster without the workspace annotation is rejected rather
+    # than left alone.
+    #
+    # Both operands are needed in each: `oldObject` is null on CREATE, `object` is null
+    # on DELETE.
+    matchConditions:
+    {{- if eq $hook.resource "rayclusters" }}
+      # Opt-in only. An un-annotated RayCluster never reaches the webhook, so adding
+      # workspace support cannot change how an existing cluster is admitted.
+      - name: is-anyscale-workspace
+        expression: "(object != null && has(object.metadata.annotations) && 'anyscale.com/workspace' in object.metadata.annotations && object.metadata.annotations['anyscale.com/workspace'] == 'true') || (oldObject != null && has(oldObject.metadata.annotations) && 'anyscale.com/workspace' in oldObject.metadata.annotations && oldObject.metadata.annotations['anyscale.com/workspace'] == 'true')"
+    {{- else }}
+      # Only intercept RayJobs that embed a RayCluster. Cluster-selector jobs (which target
+      # an existing RayCluster) carry no rayClusterSpec, so there is nothing to inject --
+      # skip the admission round-trip entirely.
+      - name: has-embedded-raycluster
+        expression: "(object != null && has(object.spec.rayClusterSpec)) || (oldObject != null && has(oldObject.spec.rayClusterSpec))"
+    {{- end }}
+  {{- end }}
