@@ -21,7 +21,7 @@ global:
   image:
     registry: us-docker.pkg.dev/anyscale-artifacts/public
     # Anyscale release tag. Required.
-    tag: "ci-db993ada04558c4fbf2834f64f2c758ffbc87643"
+    tag: "ci-a098ac7a3f978bf47a9c474e917a7809c1c1e38c"
 
   # Every component egresses to one host, derived as <cloudId>.<controlPlaneDomain>:443
   # with the cloud id lowercased and underscores turned to hyphens. Run `helm template`
@@ -49,6 +49,12 @@ global:
   #     effect: NoSchedule
   tolerations: []
 
+  # Labels and annotations added to every pod this chart creates. A component's own
+  # labels/annotations below are merged over these: on the same key, the component's wins.
+  # Keys the chart sets itself (its selector labels, a config checksum) cannot be replaced.
+  labels: {}
+  annotations: {}
+
 # ── Connector ───────────────────────────────────────────────────────────────
 connector:
   # ServiceAccount for the connector.
@@ -68,6 +74,11 @@ connector:
   # Tolerations for the connector pod, replacing global.tolerations when set.
   tolerations: []
 
+  # Labels and annotations for the connector pod, merged over global.labels and
+  # global.annotations.
+  labels: {}
+  annotations: {}
+
   # Connector image. An empty registry or tag follows global.image.registry and
   # global.image.tag; set one only to pin this image independently.
   image:
@@ -83,8 +94,13 @@ connector:
   logsHost: ""
 
   # Plain-HTTP port the connector serves its liveness and readiness probes on. Change it
-  # only if 8081 is taken by something else sharing the pod's network, such as a sidecar.
+  # only if 8081 is taken by something else sharing the pod's network: a sidecar, or the
+  # node itself when webhook.hostNetwork is on.
   healthPort: 8081
+
+  # Plain-HTTP port the connector serves its own metrics on, for the Vector sidecar to
+  # scrape. Change it only if 2112 is taken, on the same terms as healthPort.
+  metricsPort: 2112
 
   # Vector sidecar that ships the connector's logs and metrics to Anyscale; its image is the
   # top-level vector.image.
@@ -117,7 +133,7 @@ vector:
   image:
     registry: ""
     repository: vector_sidecar
-    tag: "0.57.0-f56bdbe15b0a"
+    tag: "0.57.0-0477b52f01d3"
     pullPolicy: IfNotPresent
 
 # ── Webhook ─────────────────────────────────────────────────────────────────
@@ -133,6 +149,13 @@ webhook:
 
   # HTTPS port the webhook server listens on.
   port: 8443
+
+  # true runs the connector pod on the node's network, so the API server reaches the webhook
+  # at the node's IP. Set it on clusters whose API server cannot route to pod IPs. The
+  # namespace must then allow host networking under Pod Security, and port above,
+  # connector.healthPort and connector.metricsPort all bind on the node, so pick ones no
+  # other host-network process there uses.
+  hostNetwork: false
 
   # Fail, not Ignore: if Anyscale is unreachable, Ignore would admit RayJobs that then
   # never report status. Blocking creation is recoverable; a silent status stall is not.
@@ -178,6 +201,11 @@ clusterTelemetry:
 
   # Tolerations for the gateway pod, replacing global.tolerations when set.
   tolerations: []
+
+  # Labels and annotations for the gateway pod, merged over global.labels and
+  # global.annotations.
+  labels: {}
+  annotations: {}
 
   # Host the gateway sends its own logs to. Empty follows the egress host Anyscale
   # delivers after install; override only if Anyscale told you to.
@@ -274,6 +302,11 @@ observabilityApi:
   # Tolerations for the API pod, replacing global.tolerations when set.
   tolerations: []
 
+  # Labels and annotations for the API pod, merged over global.labels and
+  # global.annotations.
+  labels: {}
+  annotations: {}
+
   # Observability API image. Built and released with the connector: an empty registry or
   # tag follows global.image.registry and global.image.tag; set one only to pin this image
   # independently.
@@ -285,8 +318,8 @@ observabilityApi:
 
 # ── Optional subcharts ──────────────────────────────────────────────────────
 # Both off: enable one only on a cluster that does not already run it (see README.md). Each block
-# is that subchart's own values file. The subcharts read their own tolerations, not
-# global.tolerations, so set theirs here.
+# is that subchart's own values file. The subcharts read their own tolerations, labels and
+# annotations, not the global ones, so set theirs here.
 
 # KubeRay operator, at the version pinned in Chart.yaml. Helm never upgrades its ray.io CRDs
 # after the first install; README.md has the upgrade step.

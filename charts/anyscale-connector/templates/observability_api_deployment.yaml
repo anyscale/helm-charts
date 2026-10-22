@@ -16,10 +16,11 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "anyscale-connector.observabilityApi.selectorLabels" . | nindent 8 }}
+        {{- include "anyscale-connector.podLabels" (dict "selector" (include "anyscale-connector.observabilityApi.selectorLabels" .) "labels" .Values.observabilityApi.labels "root" .) | nindent 8 }}
       annotations:
-        # Rolls the pod when the Vector config changes.
-        checksum/vector-config: {{ include (print $.Template.BasePath "/observability_api_vector_config.yaml") . | sha256sum }}
+        # checksum/vector-config rolls the pod when the Vector config changes.
+        {{- $checksum := include (print $.Template.BasePath "/observability_api_vector_config.yaml") . | sha256sum }}
+        {{- include "anyscale-connector.podAnnotations" (dict "chart" (dict "checksum/vector-config" $checksum) "annotations" .Values.observabilityApi.annotations "root" .) | nindent 8 }}
     spec:
       serviceAccountName: {{ include "anyscale-connector.observabilityApi.serviceAccountName" . }}
       {{- with (include "anyscale-connector.tolerations" (dict "tolerations" .Values.observabilityApi.tolerations "root" .)) }}
@@ -31,7 +32,6 @@ spec:
         - name: observability-api
           image: {{ include "anyscale-connector.image" (dict "image" .Values.observabilityApi.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set observabilityApi.image.tag)") }}
           imagePullPolicy: {{ .Values.observabilityApi.image.pullPolicy }}
-          command: ["/app/go/infra/observability_api/observability_api"]
           env:
             - name: ANYSCALE_CLOUD_ID
               value: {{ .Values.global.cloudId | quote }}
@@ -148,7 +148,6 @@ spec:
         - name: authentication-gateway
           image: {{ include "anyscale-connector.image" (dict "image" .Values.observabilityApi.ingress.authGateway.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set observabilityApi.ingress.authGateway.image.tag)") }}
           imagePullPolicy: {{ .Values.observabilityApi.ingress.authGateway.image.pullPolicy }}
-          command: ["/app/go/infra/authentication_gateway/authentication_gateway"]
           ports:
             - name: auth
               containerPort: 9000
