@@ -14,9 +14,18 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "anyscale-connector.connector.selectorLabels" . | nindent 8 }}
+        {{- include "anyscale-connector.podLabels" (dict "selector" (include "anyscale-connector.connector.selectorLabels" .) "labels" .Values.connector.labels "root" .) | nindent 8 }}
+      {{- with include "anyscale-connector.podAnnotations" (dict "annotations" .Values.connector.annotations "root" .) }}
+      annotations:
+        {{- . | nindent 8 }}
+      {{- end }}
     spec:
       serviceAccountName: {{ .Values.connector.serviceAccount.name }}
+      {{- if .Values.webhook.hostNetwork }}
+      # On the node's network the webhook is reachable at the node's IP, for clusters whose
+      # API server cannot route to pod IPs.
+      hostNetwork: true
+      {{- end }}
       {{- with (include "anyscale-connector.tolerations" (dict "tolerations" .Values.connector.tolerations "root" .)) }}
       {{- . | nindent 6 }}
       {{- end }}
@@ -38,6 +47,7 @@ spec:
             {{- end }}
             - --webhook-port={{ .Values.webhook.port }}
             - --health-port={{ .Values.connector.healthPort }}
+            - --metrics-server-port={{ .Values.connector.metricsPort }}
             - --cert-dir=/etc/webhook/tls
             - --webhook-service-name=kuberay-telemetry-injector
             - --mutating-webhook-config-name=kuberay-telemetry-injector-{{ .Release.Namespace }}

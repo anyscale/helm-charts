@@ -16,7 +16,7 @@ data:
       connector_metrics_raw:
         type: prometheus_scrape
         endpoints:
-          - http://localhost:2112/metrics
+          - http://localhost:{{ .Values.connector.metricsPort }}/metrics
         scrape_interval_secs: 30
     transforms:
       connector_logs:

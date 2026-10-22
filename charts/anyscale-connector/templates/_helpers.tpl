@@ -126,6 +126,30 @@ tolerations:
 {{- end }}
 
 {{/*
+Labels for one component's pod template: the chart's selector labels, then the component's
+own, then global.labels, merged into one map where the first occurrence of a key wins. So
+a user label can never replace a selector label, and no key renders twice.
+
+Call with: (dict "selector" (include "anyscale-connector.connector.selectorLabels" .) "labels" .Values.connector.labels "root" .)
+*/}}
+{{- define "anyscale-connector.podLabels" -}}
+{{- toYaml (merge (dict) (fromYaml .selector) (.labels | default dict) (.root.Values.global.labels | default dict)) -}}
+{{- end }}
+
+{{/*
+Annotations for one component's pod template: the ones the chart sets, then the component's
+own, then global.annotations, merged the same way. Renders nothing when all three are
+empty, so the caller can leave the annotations key out.
+
+Call with: (dict "chart" (dict "key" "value") "annotations" .Values.connector.annotations "root" .)
+*/}}
+{{- define "anyscale-connector.podAnnotations" -}}
+{{- with merge (dict) (.chart | default dict) (.annotations | default dict) (.root.Values.global.annotations | default dict) -}}
+{{- toYaml . -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Base name for the Observability API's resources.
 */}}
 {{- define "anyscale-connector.observabilityApi.fullname" -}}

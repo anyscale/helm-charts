@@ -18,10 +18,10 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "anyscale-connector.clusterTelemetry.selectorLabels" . | nindent 8 }}
+        {{- include "anyscale-connector.podLabels" (dict "selector" (include "anyscale-connector.clusterTelemetry.selectorLabels" .) "labels" .Values.clusterTelemetry.labels "root" .) | nindent 8 }}
       annotations:
         # Vector is listed first; keep `kubectl logs` on the collector.
-        kubectl.kubernetes.io/default-container: collector
+        {{- include "anyscale-connector.podAnnotations" (dict "chart" (dict "kubectl.kubernetes.io/default-container" "collector") "annotations" .Values.clusterTelemetry.annotations "root" .) | nindent 8 }}
     spec:
       # The gateway's own ServiceAccount, so its cluster-wide node/pod read is not also
       # granted to the connector, and the connector's write permissions are not granted here.
@@ -129,9 +129,9 @@ spec:
             # Third listener, for the KubeRay workload events the collector exports. Same
             # host as above unless Anyscale gave you a separate one.
             {{- with .Values.clusterTelemetry.eventsHost }}
-            - --kcp-events-host={{ . }}
+            - --events-host={{ . }}
             {{- else }}
-            - --kcp-events-host=$(CONTROL_PLANE_HOST)
+            - --events-host=$(CONTROL_PLANE_HOST)
             {{- end }}
             # Fourth listener, for the collector's own metrics. Same host as above
             # unless Anyscale gave you a separate one.
