@@ -138,8 +138,10 @@ data:
     - kind: Pod
       selector: anyscale.com/zone
       patch:
+        # json-patch rejects an add without a value; the copy below overwrites it.
         - op: add
           path: /spec/nodeSelector/topology.kubernetes.io~1zone
+          value: ""
         - op: copy
           from: /metadata/annotations/anyscale.com~1zone
           path: /spec/nodeSelector/topology.kubernetes.io~1zone

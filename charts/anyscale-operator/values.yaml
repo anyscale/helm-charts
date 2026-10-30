@@ -56,11 +56,11 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-b85245e59c380520f77b15a1dea444de5a835ae6
+          tag: ci-a96f931ef8a4866e6945a736244a9ca690ea5d19
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector_sidecar
-          tag: 0.57.0-f56bdbe15b0a
+          tag: 0.57.0-0477b52f01d3
 
 ################################################################
 # Networking and ingress configuration
@@ -653,7 +653,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-b85245e59c380520f77b15a1dea444de5a835ae6"
+      tag: "ci-a96f931ef8a4866e6945a736244a9ca690ea5d19"
 
     resources:
       requests:
@@ -683,7 +683,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/vector_sidecar
-      tag: "0.57.0-f56bdbe15b0a"
+      tag: "0.57.0-0477b52f01d3"
 
     resources:
       requests:
