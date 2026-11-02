@@ -38,7 +38,8 @@
     "clusterTelemetry": { "type": "object" },
     "observabilityApi": { "type": "object" },
     "kuberay-operator": { "type": "object" },
-    "dcgm-exporter": { "type": "object" }
+    "dcgm-exporter": { "type": "object" },
+    "traefik": { "type": "object" }
   },
   "additionalProperties": false,
   "required": ["global"]
