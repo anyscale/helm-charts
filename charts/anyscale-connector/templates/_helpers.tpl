@@ -38,6 +38,13 @@ app.kubernetes.io/component: connector
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
+{{/* Labels for the pre-install setup hook's pod: a component of its own, so the connector Service never selects it. */}}
+{{- define "anyscale-connector.connector.setupSelectorLabels" -}}
+app.kubernetes.io/name: {{ include "anyscale-connector.name" . }}
+app.kubernetes.io/component: connector-setup
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
 {{/*
 Projected-token audience, shared by every pod in this chart. Must match what Anyscale
 derives per cloud resource, so it is defined once here rather than inlined per
@@ -65,6 +72,91 @@ normalizes it, so the transform is load-bearing, not cosmetic.
 {{- $cloud := required "global.cloudId is required" .Values.global.cloudId -}}
 {{- $domain := required "global.controlPlaneDomain is required" .Values.global.controlPlaneDomain -}}
 {{- printf "%s.%s:443" ($cloud | lower | replace "_" "-") $domain -}}
+{{- end }}
+{{- end }}
+
+{{/*
+The connector's projected ServiceAccount token: one define for the mount and one for the
+volume, shared by the connector Deployment and the pre-install hook so the file name the
+binary reads (--token-path in configArgs) cannot drift from the name the volume projects.
+*/}}
+{{- define "anyscale-connector.connector.tokenVolumeMount" -}}
+- name: connector-token
+  mountPath: /var/run/secrets/anyscale
+  readOnly: true
+{{- end }}
+
+{{- define "anyscale-connector.connector.tokenVolume" -}}
+- name: connector-token
+  projected:
+    sources:
+      - serviceAccountToken:
+          audience: {{ include "anyscale-connector.tokenAudience" . }}
+          expirationSeconds: 3600
+          path: connector-token
+{{- end }}
+
+{{/*
+The grants the connector needs for the ConfigMaps Anyscale applies over its operation stream,
+shared by the running connector's Role and the pre-install hook's Role so the hook can do
+exactly what the connector does and nothing else.
+*/}}
+{{- define "anyscale-connector.connector.configMapRules" -}}
+# Apply the ConfigMaps Anyscale renders. create can't be name-scoped, so it is a separate
+# rule; get/patch stay restricted to the two ConfigMaps. Ungated because connector-config
+# ships whether or not the gateway is installed; the object names keep "telemetry" so an
+# upgrade patches them in place rather than recreating the binding.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["connector-config", "cluster-telemetry-config"]
+  verbs: ["get", "patch"]
+{{- if .Values.clusterTelemetry.enabled }}
+# Read back the gateway config to check it is current. The read selects the ConfigMap by
+# name, which is what lets list be scoped to it.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  resourceNames: ["cluster-telemetry-config"]
+  verbs: ["list"]
+# Restart the gateway when its config changes, by updating one annotation on its pod template.
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  resourceNames: [{{ include "anyscale-connector.clusterTelemetry.fullname" . | quote }}]
+  verbs: ["patch"]
+{{- end }}
+{{- end }}
+
+{{/*
+The connector's config arguments, shared by the connector Deployment and the pre-install setup
+hook so the hook asks the control plane for exactly the config the running connector would.
+Two defines because the Deployment keeps them apart: the identity trio opens its args, the
+gateway scrape inputs close them.
+*/}}
+{{- define "anyscale-connector.connector.coreArgs" -}}
+- --cloud-resource-id={{ required "global.cloudResourceId is required" .Values.global.cloudResourceId }}
+- --control-plane-host={{ include "anyscale-connector.controlPlaneHost" . }}
+- --token-path=/var/run/secrets/anyscale/connector-token
+{{- end }}
+
+{{- define "anyscale-connector.connector.telemetryArgs" -}}
+{{- if .Values.clusterTelemetry.enabled -}}
+# ── Cluster Telemetry Gateway ───────────────────────────────────
+# Publish the gateway's collector ConfigMap at startup.
+- --cluster-telemetry-enabled=true
+{{- with include "anyscale-connector.dcgm.namespace" . }}
+- --dcgm-namespace={{ . }}
+{{- with include "anyscale-connector.dcgm.serviceName" $ }}
+- --dcgm-service-name={{ . }}
+{{- end }}
+{{- end }}
+{{- if .Values.clusterTelemetry.kubeStateMetricsNamespace }}
+- --kube-state-metrics-namespace={{ .Values.clusterTelemetry.kubeStateMetricsNamespace }}
+{{- if .Values.clusterTelemetry.kubeStateMetricsServiceName }}
+- --kube-state-metrics-service-name={{ .Values.clusterTelemetry.kubeStateMetricsServiceName }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -208,5 +300,39 @@ A set value that points elsewhere is honoured; the connector warns at startup if
 {{- .Values.clusterTelemetry.dcgmServiceName -}}
 {{- else if (index .Values "dcgm-exporter").enabled -}}
 {{- include "dcgm-exporter.fullname" (index .Subcharts "dcgm-exporter") -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+The bundled traefik subchart's IngressClass: traefik.ingressClass.name when set, else the subchart's
+own fullname, read through its context as the dcgm helpers do. Only valid while traefik.enabled.
+*/}}
+{{- define "anyscale-connector.ingressController.className" -}}
+{{- .Values.traefik.ingressClass.name | default (include "traefik.fullname" (index .Subcharts "traefik")) -}}
+{{- end }}
+
+{{/*
+Class of the Observability API's Ingress: an explicit value, else the bundled controller's class
+when it is on, else nginx (the class most clusters already run).
+*/}}
+{{- define "anyscale-connector.observabilityApi.ingressClassName" -}}
+{{- if .Values.observabilityApi.ingress.className -}}
+{{- .Values.observabilityApi.ingress.className -}}
+{{- else if .Values.traefik.enabled -}}
+{{- include "anyscale-connector.ingressController.className" . -}}
+{{- else -}}
+nginx
+{{- end -}}
+{{- end }}
+
+{{/*
+Default class for the Ingresses Anyscale creates for workloads: explicit, else the bundled
+controller's when on, else empty (the cluster's default class applies).
+*/}}
+{{- define "anyscale-connector.workloadIngressClassName" -}}
+{{- if .Values.global.ingressClassName -}}
+{{- .Values.global.ingressClassName -}}
+{{- else if .Values.traefik.enabled -}}
+{{- include "anyscale-connector.ingressController.className" . -}}
 {{- end -}}
 {{- end }}

@@ -21,7 +21,7 @@ global:
   image:
     registry: us-docker.pkg.dev/anyscale-artifacts/public
     # Anyscale release tag. Required.
-    tag: "ci-a098ac7a3f978bf47a9c474e917a7809c1c1e38c"
+    tag: "ci-c4abc170c47a124f135b130e6ddb70d1e77d72a4"
 
   # Every component egresses to one host, derived as <cloudId>.<controlPlaneDomain>:443
   # with the cloud id lowercased and underscores turned to hyphens. Run `helm template`
@@ -93,6 +93,18 @@ connector:
   metricsHost: ""
   logsHost: ""
 
+  # Pre-install hook: a one-shot run of the connector image that asks Anyscale to apply this
+  # release's ConfigMaps (connector-config and, with the gateway on, cluster-telemetry-config)
+  # before the gateway and the Observability API start, instead of those pods waiting in
+  # CreateContainerConfigError. It runs as the connector's ServiceAccount, created early and
+  # replaced by the real one. A failure fails the install, with the reason in the hook's log.
+  setupHook:
+    enabled: true
+    # Seconds the hook waits for Anyscale before failing the install. Keep it under helm's
+    # --timeout (5m by default) minus pod start-up, so the Job's log, not helm's timeout,
+    # reports the failure.
+    timeoutSeconds: 180
+
   # Plain-HTTP port the connector serves its liveness and readiness probes on. Change it
   # only if 8081 is taken by something else sharing the pod's network: a sidecar, or the
   # node itself when webhook.hostNetwork is on.
@@ -101,6 +113,9 @@ connector:
   # Plain-HTTP port the connector serves its own metrics on, for the Vector sidecar to
   # scrape. Change it only if 2112 is taken, on the same terms as healthPort.
   metricsPort: 2112
+
+  # Resources for the connector container.
+  resources: {}
 
   # Vector sidecar that ships the connector's logs and metrics to Anyscale; its image is the
   # top-level vector.image.
@@ -124,11 +139,16 @@ forwarder:
     tag: ""
     pullPolicy: Always
 
+  # Resources for both forwarder sidecars. clusterTelemetry.forwarder.resources and
+  # observabilityApi.forwarder.resources each replace it for their pod.
+  resources: {}
+
 # ── Vector ──────────────────────────────────────────────────────────────────
 # Vector sidecar image. One image, run beside the connector, the Cluster Telemetry Gateway and
 # the Observability API, so it is defined once here rather than per component. An empty
 # registry follows global.image.registry. The tag names the image's content, so every release
-# carries the same one until the image changes; a mirror must carry this tag.
+# carries the same one until the image changes; a mirror must carry this tag. Resources are
+# set per component (connector.vector, clusterTelemetry.vector, observabilityApi.vector).
 vector:
   image:
     registry: ""
@@ -228,8 +248,15 @@ clusterTelemetry:
     image:
       registry: docker.io
       repository: otel/opentelemetry-collector-contrib
-      tag: "0.154.0"
+      tag: "0.163.2"
       pullPolicy: IfNotPresent
+    # Resources for the collector and for the init container that validates its config.
+    resources: {}
+
+  # Forwarder sidecar; its image is the top-level forwarder.image. Resources set here
+  # replace forwarder.resources.
+  forwarder:
+    resources: {}
 
   # Vector ships the gateway's own logs to Anyscale for support and debugging; its image is
   # the top-level vector.image.
@@ -269,8 +296,9 @@ observabilityApi:
     # provisions that certificate only into the cloud's allowed namespaces, so install the
     # chart into one of them or set this to a secret that exists in the release namespace.
     tlsSecretName: ""
-    # Ingress class fronting the host (the cluster's nginx ingress).
-    className: nginx
+    # IngressClass fronting the host. Empty means the bundled traefik's class when
+    # traefik.enabled is on, else nginx.
+    className: ""
     # Authentication gateway fronting the API: verifies the access token for this
     # cloud resource and sets the console session cookie. An empty registry or tag follows
     # global.image.registry and global.image.tag; set one only to pin this image
@@ -281,13 +309,15 @@ observabilityApi:
         repository: authn
         tag: ""
         pullPolicy: Always
-    # Front-proxy image (traefik v3).
+      resources: {}
+    # Front proxy (traefik v3).
     traefik:
       image:
         registry: docker.io
         repository: traefik
-        tag: "v3.7.15"
+        tag: "v3.7.16"
         pullPolicy: IfNotPresent
+      resources: {}
 
   # Port the API server listens on.
   apiPort: 8080
@@ -298,6 +328,15 @@ observabilityApi:
       memory: 8Gi
     requests:
       memory: 8Gi
+
+  # Forwarder sidecar; its image is the top-level forwarder.image. Resources set here
+  # replace forwarder.resources.
+  forwarder:
+    resources: {}
+
+  # Vector sidecar for the API's own metrics; its image is the top-level vector.image.
+  vector:
+    resources: {}
 
   # Tolerations for the API pod, replacing global.tolerations when set.
   tolerations: []
@@ -361,3 +400,25 @@ dcgm-exporter:
     - key: nvidia.com/gpu
       operator: Exists
       effect: NoSchedule
+
+# ── Ingress controller (traefik subchart) ────────────────────────────────────
+# A minimal, quick-setup install of the upstream traefik chart: one replica, cluster-wide RBAC, and
+# traefik's CRDs installed cluster-wide (Helm neither upgrades nor removes them). Not recommended
+# for production; run your own ingress controller there and set observabilityApi.ingress.className
+# to its class. Any upstream traefik value can be set in this block.
+traefik:
+  # On, it serves the Observability API's Ingress and the workload Ingresses Anyscale creates, and
+  # both ingress classes default to its class, anyscale-connector-traefik.
+  enabled: false
+  # Fixed names for the controller's resources and IngressClass, whatever the release is called.
+  fullnameOverride: anyscale-connector-traefik
+  ingressClass:
+    # Never a second default class: Ingresses naming no class stay with the cluster's own controller.
+    isDefaultClass: false
+  providers:
+    kubernetesIngress:
+      # Only Ingresses naming this class; the upstream default also serves classless Ingresses.
+      ingressClass: anyscale-connector-traefik
+  service:
+    # Cloud load balancer settings, e.g. service.beta.kubernetes.io/aws-load-balancer-type: nlb.
+    annotations: {}

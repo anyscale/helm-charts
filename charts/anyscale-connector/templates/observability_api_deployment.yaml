@@ -83,8 +83,10 @@ spec:
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
+          {{- with .Values.observabilityApi.resources }}
           resources:
-            {{- toYaml .Values.observabilityApi.resources | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: obs-tmp
               mountPath: /tmp/anyscale/observability
@@ -119,6 +121,10 @@ spec:
             httpGet: { path: /ready, port: fwd-health }
             initialDelaySeconds: 5
             periodSeconds: 10
+          {{- with .Values.observabilityApi.forwarder.resources | default .Values.forwarder.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: anyscale-token
               mountPath: /var/run/secrets/anyscale
@@ -138,6 +144,10 @@ spec:
             # text. Remove once the config drops ${VAR}.
             - name: VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION
               value: "true"
+          {{- with .Values.observabilityApi.vector.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: vector-config
               mountPath: /etc/vector
@@ -182,6 +192,10 @@ spec:
               value: "0"
             - name: GODEBUG
               value: "tlsmlkem=0"
+          {{- with .Values.observabilityApi.ingress.authGateway.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
         - name: traefik
           image: {{ include "anyscale-connector.image" (dict "image" .Values.observabilityApi.ingress.traefik.image "tagError" "observabilityApi.ingress.traefik.image.tag is required") }}
           imagePullPolicy: {{ .Values.observabilityApi.ingress.traefik.image.pullPolicy }}
@@ -189,6 +203,10 @@ spec:
           ports:
             - name: web
               containerPort: 80
+          {{- with .Values.observabilityApi.ingress.traefik.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: obs-traefik-config
               mountPath: /etc/traefik

@@ -34,9 +34,7 @@ spec:
           image: {{ include "anyscale-connector.image" (dict "image" .Values.connector.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set connector.image.tag)") }}
           imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
           args:
-            - --cloud-resource-id={{ required "global.cloudResourceId is required" .Values.global.cloudResourceId }}
-            - --control-plane-host={{ include "anyscale-connector.controlPlaneHost" . }}
-            - --token-path=/var/run/secrets/anyscale/connector-token
+            {{- include "anyscale-connector.connector.coreArgs" . | nindent 12 }}
             - --connector-version={{ .Chart.Version }}
             - --log-file=/tmp/anyscale/logs/connector.log
             {{- with .Values.connector.metricsHost }}
@@ -53,25 +51,11 @@ spec:
             - --mutating-webhook-config-name=kuberay-telemetry-injector-{{ .Release.Namespace }}
             - --cert-secret-name=kuberay-telemetry-injector-certs
             - --manage-certs={{ .Values.webhook.manageCerts }}
-            {{- if .Values.global.ingressClassName }}
-            - --default-ingress-class-name={{ .Values.global.ingressClassName }}
+            {{- with include "anyscale-connector.workloadIngressClassName" . }}
+            - --default-ingress-class-name={{ . }}
             {{- end }}
-            {{- if .Values.clusterTelemetry.enabled }}
-            # ── Cluster Telemetry Gateway ───────────────────────────────────
-            # Publish the gateway's collector ConfigMap at startup.
-            - --cluster-telemetry-enabled=true
-            {{- with include "anyscale-connector.dcgm.namespace" . }}
-            - --dcgm-namespace={{ . }}
-            {{- with include "anyscale-connector.dcgm.serviceName" $ }}
-            - --dcgm-service-name={{ . }}
-            {{- end }}
-            {{- end }}
-            {{- if .Values.clusterTelemetry.kubeStateMetricsNamespace }}
-            - --kube-state-metrics-namespace={{ .Values.clusterTelemetry.kubeStateMetricsNamespace }}
-            {{- if .Values.clusterTelemetry.kubeStateMetricsServiceName }}
-            - --kube-state-metrics-service-name={{ .Values.clusterTelemetry.kubeStateMetricsServiceName }}
-            {{- end }}
-            {{- end }}
+            {{- with include "anyscale-connector.connector.telemetryArgs" . }}
+            {{- . | nindent 12 }}
             {{- end }}
           env:
             - name: POD_NAMESPACE
@@ -105,10 +89,12 @@ spec:
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 3
+          {{- with .Values.connector.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
-            - name: connector-token
-              mountPath: /var/run/secrets/anyscale
-              readOnly: true
+            {{- include "anyscale-connector.connector.tokenVolumeMount" . | nindent 12 }}
             - name: webhook-certs
               mountPath: /etc/webhook/tls
               readOnly: true
@@ -143,8 +129,10 @@ spec:
             # tags would ship as literal text. Remove once the config drops ${VAR}.
             - name: VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION
               value: "true"
+          {{- with .Values.connector.vector.resources }}
           resources:
-{{ toYaml .Values.connector.vector.resources | indent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: logs
               mountPath: /tmp/anyscale/logs/
@@ -155,13 +143,7 @@ spec:
             - name: vector-state
               mountPath: /tmp/vector
       volumes:
-        - name: connector-token
-          projected:
-            sources:
-              - serviceAccountToken:
-                  audience: {{ include "anyscale-connector.tokenAudience" . }}
-                  expirationSeconds: 3600
-                  path: connector-token
+        {{- include "anyscale-connector.connector.tokenVolume" . | nindent 8 }}
         - name: logs
           emptyDir: {}
         - name: forwarder-egress

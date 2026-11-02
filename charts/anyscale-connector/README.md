@@ -26,16 +26,40 @@ the optional subcharts, and how to upgrade.
 - **Upgrade only when Anyscale tells you to.** Until 1.0 a new release may rename values,
   change resources, or need a manual step first. Anyscale tells you what to do before you move.
 
+## Install order
+
+A pre-install hook (`connector.setupHook`, on by default) runs the connector image once with
+`--setup-config`: it asks Anyscale to apply the release's ConfigMaps before the gateway and the
+Observability API are created, so those pods start with their config present instead of waiting
+in `CreateContainerConfigError`. When Anyscale cannot deliver the config (the cloud is not
+registered, the token audience does not match the control plane you registered with), the hook
+fails the install within `connector.setupHook.timeoutSeconds` (3 minutes by default, under helm's
+own 5 minute `--timeout` so that the Job's log, not helm's timeout, reports the failure) and its
+pod log carries the reason:
+
+```sh
+kubectl -n anyscale-connector logs job/anyscale-connector-setup
+```
+
+The hook runs as a ServiceAccount of the connector's registered name and replaces its own leftovers
+from a failed attempt. If a ServiceAccount of that name already exists and is not such a leftover
+(another release of this chart in the namespace, or one an uninstall left behind), the install
+stops before touching it. `helm upgrade` renders none of this: the hook is install-only, and the
+running connector keeps the config current. On a successful run the log may show one failed
+operation for the gateway Deployment, which does not exist yet; the running connector applies it
+later.
+
 ## Optional subcharts
 
-The chart can install the two things a KubeRay cluster needs that the connector itself does
-not provide. Both are off by default: most clusters already run them, and a second copy
+The chart can install the three things a KubeRay cluster needs that the connector itself does
+not provide. All are off by default: most clusters already run them, and a second copy
 collides with the first.
 
 | Subchart | Enable with | Use instead of |
 |---|---|---|
 | [kuberay-operator](https://github.com/ray-project/kuberay) | `kuberay-operator.enabled=true` | an operator you already run |
 | [dcgm-exporter](https://github.com/NVIDIA/dcgm-exporter) | `dcgm-exporter.enabled=true` | the NVIDIA GPU Operator's exporter, or your own |
+| [traefik](https://github.com/traefik/traefik-helm-chart) ingress controller | `traefik.enabled=true` | an ingress controller you already run |
 
 The versions pinned in `Chart.yaml` are the ones this chart release is tested with. Each block in
 `values.yaml` is the subchart's own values file, so any upstream value can be set there: for
@@ -61,6 +85,34 @@ nodes.
 Leave both off (the default). Point GPU metrics at your exporter with
 `clusterTelemetry.dcgmNamespace` and, if its Service is not named `nvidia-dcgm-exporter`,
 `clusterTelemetry.dcgmServiceName`. An operator you already run needs no configuration.
+
+### The bundled ingress controller
+
+With `traefik.enabled=true` the chart installs the upstream traefik chart as a subchart, meant for
+quick setup rather than production: one replica, cluster-wide RBAC, and traefik's CRDs installed
+cluster-wide. Helm installs CRDs once and never upgrades or removes them, so they outlive
+`helm uninstall` (`kubectl get crd | grep traefik.io` lists them) and are upgraded by hand, as the
+operator's are. The controller serves the Ingresses that name its class,
+`anyscale-connector-traefik`: this chart's Observability API Ingress and the per-workload dashboard
+Ingresses Anyscale creates. Both `observabilityApi.ingress.className` and `global.ingressClassName`
+default to that class, and it is never the cluster's default IngressClass. Its Service is a cloud
+`LoadBalancer`; put your cloud's settings under `traefik.service.annotations`, for example on AWS:
+
+```yaml
+traefik:
+  enabled: true
+  service:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: nlb
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+```
+
+Any upstream traefik value can be set under `traefik`; renaming the class takes both
+`traefik.ingressClass.name` and `traefik.providers.kubernetesIngress.ingressClass`.
+
+For production, or with a controller you already run, leave `traefik.enabled` off and set
+`observabilityApi.ingress.className` to its IngressClass. The class must honor the Ingress's
+`spec.tls` Secret (nginx, traefik and haproxy do).
 
 Enabling `kuberay-operator` next to an existing operator fails at install time: the operator's
 resource names are fixed (`kuberay-operator`), so Helm refuses to take ownership of them. That

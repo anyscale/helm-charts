@@ -1,0 +1,122 @@
+{{- /*
+Pre-install hook: a one-shot run of the connector image that asks Anyscale to apply this
+release's ConfigMaps (connector-config and, with the gateway on, cluster-telemetry-config)
+before the gateway and the Observability API exist. Their pods read those ConfigMaps through
+non-optional refs, so without this they wait in CreateContainerConfigError for the running
+connector's first sync, and when that sync cannot succeed the install times out with no reason.
+The hook fails fast instead, with the reason in its log.
+
+Anyscale's ingress accepts the connector route only from the ServiceAccount registered for
+this cloud resource, so the hook runs as a ServiceAccount of that exact name, created here and
+deleted on success before the chart creates the real one. Install only: on an upgrade the real
+ServiceAccount exists and a running connector keeps the config current, so nothing here renders
+(the guard below would otherwise refuse the release's own ServiceAccount).
+*/ -}}
+{{- if and .Values.connector.setupHook.enabled .Release.IsInstall }}
+{{- $name := printf "%s-setup" .Values.connector.serviceAccount.name }}
+{{- $saName := .Values.connector.serviceAccount.name }}
+{{- /* before-hook-creation would delete a same-named ServiceAccount that belongs to a running
+release; refuse unless it is this hook's own leftover (marked by the annotation below). */ -}}
+{{- with (lookup "v1" "ServiceAccount" .Release.Namespace $saName) }}
+{{- if not (hasKey (.metadata.annotations | default dict) "anyscale.com/setup-hook") }}
+{{- fail (printf "ServiceAccount %s/%s already exists and is not this hook's leftover: another release of this chart is installed in the namespace, or an uninstall left it behind. Delete it or install into another namespace." $.Release.Namespace $saName) }}
+{{- end }}
+{{- end }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $saName }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+  annotations:
+    anyscale.com/setup-hook: "true"
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-3"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-2"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+rules:
+  {{- include "anyscale-connector.connector.configMapRules" . | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "-1"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $name }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ .Values.connector.serviceAccount.name }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "anyscale-connector.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install
+    helm.sh/hook-weight: "0"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+    # helm 3.17 and newer print the Job's log on failure; older versions ignore the key.
+    helm.sh/hook-output-log-policy: hook-failed
+spec:
+  # Retries live inside the binary, so one pod log holds the whole story.
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        {{- include "anyscale-connector.podLabels" (dict "selector" (include "anyscale-connector.connector.setupSelectorLabels" .) "labels" .Values.connector.labels "root" .) | nindent 8 }}
+      {{- with (include "anyscale-connector.podAnnotations" (dict "annotations" .Values.connector.annotations "root" .)) }}
+      annotations:
+        {{- . | nindent 8 }}
+      {{- end }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ .Values.connector.serviceAccount.name }}
+      {{- with (include "anyscale-connector.tolerations" (dict "tolerations" .Values.connector.tolerations "root" .)) }}
+      {{- . | nindent 6 }}
+      {{- end }}
+      containers:
+        - name: setup-config
+          image: {{ include "anyscale-connector.image" (dict "image" .Values.connector.image "fallbackRegistry" .Values.global.image.registry "fallbackTag" .Values.global.image.tag "tagError" "global.image.tag is required (or set connector.image.tag)") }}
+          imagePullPolicy: {{ .Values.connector.image.pullPolicy }}
+          args:
+            {{- include "anyscale-connector.connector.coreArgs" . | nindent 12 }}
+            {{- with include "anyscale-connector.connector.telemetryArgs" . }}
+            {{- . | nindent 12 }}
+            {{- end }}
+            - --setup-config
+            - --setup-config-timeout={{ .Values.connector.setupHook.timeoutSeconds }}s
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          volumeMounts:
+            {{- include "anyscale-connector.connector.tokenVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "anyscale-connector.connector.tokenVolume" . | nindent 8 }}
+{{- end }}
