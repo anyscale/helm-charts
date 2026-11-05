@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-a96f931ef8a4866e6945a736244a9ca690ea5d19
+          tag: ci-6045673368414ac48c8420e0df346523d8820483
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector_sidecar
@@ -84,6 +84,13 @@ networking:
     # If set, this will be the class name of the ingress resource.
     # By default, the operator will use the class name 'nginx' or '.Values.ingress-nginx.controller.ingressClass' if ingress-nginx is enabled.
     classNameOverride: ""
+    # bool, nginxCompatibleTraefik, default: false
+    # Set to true when your own Traefik serves the Anyscale Ingress resources through
+    # its Ingress NGINX provider under a class other than the bundled Traefik's. The
+    # operator then stamps the service auth snippet in the form that provider evaluates.
+    # Implied when traefik.enabled is true or classNameOverride names the bundled
+    # Traefik's class (traefik.ingressClass.name).
+    nginxCompatibleTraefik: false
 
   # Gateway configuration
   gateway:
@@ -653,7 +660,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-a96f931ef8a4866e6945a736244a9ca690ea5d19"
+      tag: "ci-6045673368414ac48c8420e0df346523d8820483"
 
     resources:
       requests:
@@ -856,3 +863,68 @@ ingress-nginx:
       default: false
       # Only watch ingresses with this specific class name
       controllerValue: "k8s.io/anyscale-nginx"
+
+################################################################
+# OPTIONAL: Traefik Ingress Controller related values.
+# If enabled, Traefik will be installed as a dependency, running
+# its Ingress NGINX provider so the nginx.ingress.kubernetes.io
+# annotations Anyscale sets on its Ingresses keep working.
+# Enable at most one of ingress-nginx and traefik.
+################################################################
+traefik:
+  # bool, enabled, default: false
+  # Whether to install Traefik as a dependency.
+  enabled: false
+
+  ingressClass:
+    enabled: true
+    # The name of the IngressClass resource. The operator points every Ingress it creates at it.
+    name: anyscale-traefik
+    # Ensure this is not the default ingress class
+    isDefaultClass: false
+
+  providers:
+    # Only the Ingress NGINX provider runs, so each Ingress gets exactly one router.
+    kubernetesCRD:
+      enabled: false
+    kubernetesIngress:
+      enabled: false
+    kubernetesIngressNGINX:
+      enabled: true
+      # Must match ingressClass.name above: the controller serves that class by name.
+      ingressClass: anyscale-traefik
+      ingressClassByName: true
+      # Unique controller value: the provider also selects every IngressClass whose controller matches, so the
+      # official chart's shared traefik.io/ingress-controller would claim other Traefik installs' Ingresses.
+      controllerClass: anyscale.com/anyscale-traefik
+      watchIngressWithoutClass: false
+      # Copies the controller Service's address onto each Ingress it serves. Anyscale reads it to publish DNS.
+      publishService:
+        enabled: true
+      # Required for authorization snippets to work with Anyscale Services.
+      allowSnippetAnnotations: true
+      httpEntryPoint: web
+      httpsEntryPoint: websecure
+
+  service:
+    type: LoadBalancer
+    # Annotations grouped by cloud provider. Uncomment the ones you need below.
+    annotations: {}
+      # AWS Configuration
+      # Replace "internet-facing" with "internal" if you want to use an internal load balancer, which is only accessible
+      # from inside the VPC and requires a VPN to access remotely.
+      #
+      # service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      # service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+      # service.beta.kubernetes.io/aws-load-balancer-type: nlb
+
+      # Google Cloud Configuration
+      # Replace "internet-facing" with "internal" if you want to use an internal load balancer, which is only accessible
+      # from inside the VPC and requires a VPN to access remotely.
+      #
+      # cloud.google.com/load-balancer-type: "External"
+
+      # Azure Configuration
+      # Set the health probe request path to the path of the health probe.
+      #
+      # service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path: "/healthz"
