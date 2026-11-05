@@ -263,9 +263,19 @@ data:
     {{- end }}
 
     {{- /* Ingress Class Name Patches */ -}}
+    {{- /* The chart bundles one ingress controller at a time: two would claim the same Ingresses. */ -}}
+    {{- if and (index .Values "ingress-nginx" "enabled") .Values.traefik.enabled -}}
+      {{- fail "ingress-nginx.enabled and traefik.enabled are mutually exclusive: enable at most one bundled ingress controller" -}}
+    {{- end -}}
     {{- $ingressClassName := "" -}}
     {{- if .Values.networking.ingress.classNameOverride -}}
       {{- $ingressClassName = .Values.networking.ingress.classNameOverride -}}
+    {{- else if .Values.traefik.enabled -}}
+      {{- /* Traefik serves its class by name, so the class the operator stamps must be the one its provider watches. */ -}}
+      {{- if ne .Values.traefik.ingressClass.name .Values.traefik.providers.kubernetesIngressNGINX.ingressClass -}}
+        {{- fail "traefik.ingressClass.name and traefik.providers.kubernetesIngressNGINX.ingressClass must match" -}}
+      {{- end -}}
+      {{- $ingressClassName = .Values.traefik.ingressClass.name -}}
     {{- else if and (index .Values "ingress-nginx" "enabled") (ne (index .Values "ingress-nginx" "controller" "ingressClassResource" "name") "nginx") -}}
       {{- $ingressClassName = index .Values "ingress-nginx" "controller" "ingressClassResource" "name" -}}
     {{- end -}}
@@ -281,6 +291,22 @@ data:
         - op: add
           path: /metadata/annotations/kubernetes.io~1ingress.class
           value: {{ $ingressClassName }}
+    {{- end }}
+
+    {{- /* Traefik's Ingress NGINX provider cuts a quoted if-operand at its first space, so the */ -}}
+    {{- /* keeper's legacy service auth snippet fails open there. The keeper also emits a whitespace- */ -}}
+    {{- /* free form under this annotation; copy it over server-snippet. Only Ingresses carrying the */ -}}
+    {{- /* key match, so head-node Ingresses (no snippet) are untouched and copy always has a source. */ -}}
+    {{- if include "anyscale-operator.nginxCompatibleTraefik" . }}
+    ########################################
+    # Traefik (Ingress NGINX provider) service auth snippet
+    ########################################
+    - kind: Ingress
+      selector: anyscale.com/nginx-compatible-traefik-server-snippet
+      patch:
+        - op: copy
+          from: /metadata/annotations/anyscale.com~1nginx-compatible-traefik-server-snippet
+          path: /metadata/annotations/nginx.ingress.kubernetes.io~1server-snippet
     {{- end }}
 
     {{- /* AWS-Specific Patches */ -}}

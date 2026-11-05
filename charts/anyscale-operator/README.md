@@ -46,6 +46,7 @@ For advanced usage consult with Anyscale support.
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `networking.ingress.address` | string | `""` | DNS address for cluster ingress. Override the default ingress address set by your ingress controller. Used for DNS resolution for humans and Anyscale Services. Can be either an IP address or a hostname. |
+| `networking.ingress.nginxCompatibleTraefik` | bool | `false` | Set when your own Traefik serves the Anyscale Ingress resources through its Ingress NGINX provider under a class other than the bundled Traefik's. Implied by `traefik.enabled` or a `classNameOverride` naming the bundled Traefik's class. |
 
 #### Gateway
 
@@ -161,7 +162,7 @@ Use these to pull workload container images from a private registry (e.g. a self
 |-----------|------|---------|-------------|
 | `operator.container.image.registry` | string | `"us-docker.pkg.dev"` | Operator container image registry |
 | `operator.container.image.image` | string | `"anyscale-artifacts/public/kubernetes_manager"` | Operator container image name |
-| `operator.container.image.tag` | string | `ci-a96f931ef8a4866e6945a736244a9ca690ea5d19` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
+| `operator.container.image.tag` | string | `ci-6045673368414ac48c8420e0df346523d8820483` | Operator container image tag. Updated with helm releases. Anyscale support may provide preview versions. |
 | `operator.container.resources.requests.memory` | string | `"512Mi"` | Operator container memory request |
 | `operator.container.resources.requests.cpu` | int | `1` | Operator container CPU request |
 | `operator.container.resources.limits.memory` | string | `"2Gi"` | Operator container memory limit |
@@ -220,6 +221,23 @@ Use these to pull workload container images from a private registry (e.g. a self
 | `ingress-nginx.controller.ingressClassResource.name` | string | `"anyscale-nginx"` | Name of the ingress class resource |
 | `ingress-nginx.controller.ingressClassResource.default` | bool | `false` | Whether this is the default ingress class |
 | `ingress-nginx.controller.ingressClassResource.controllerValue` | string | `"k8s.io/anyscale-nginx"` | Controller value for the ingress class |
+
+### Traefik Ingress Controller
+
+**Optional:** If enabled, Traefik will be installed as a dependency, running its Ingress NGINX provider so the `nginx.ingress.kubernetes.io` annotations Anyscale sets on its Ingresses keep working. Enable at most one of `ingress-nginx` and `traefik`; the chart refuses to render with both.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `traefik.enabled` | bool | `false` | Whether to install Traefik as a dependency |
+| `traefik.ingressClass.name` | string | `"anyscale-traefik"` | Name of the IngressClass resource; the operator points every Ingress it creates at it |
+| `traefik.ingressClass.isDefaultClass` | bool | `false` | Whether this is the default ingress class |
+| `traefik.providers.kubernetesIngressNGINX.ingressClass` | string | `"anyscale-traefik"` | Class the Ingress NGINX provider serves; must equal `traefik.ingressClass.name` |
+| `traefik.providers.kubernetesIngressNGINX.publishService.enabled` | bool | `true` | Copy the controller Service's address onto each Ingress; Anyscale reads it to publish DNS |
+| `traefik.providers.kubernetesIngressNGINX.allowSnippetAnnotations` | bool | `true` | Required for authorization snippets to work with Anyscale Services |
+| `traefik.providers.kubernetesIngress.enabled` | bool | `false` | Standard Ingress provider, off so each Ingress gets one router |
+| `traefik.providers.kubernetesCRD.enabled` | bool | `false` | Traefik CRD provider, off |
+| `traefik.service.type` | string | `"LoadBalancer"` | Service type for the ingress controller |
+| `traefik.service.annotations` | object | `{}` | Service annotations (cloud provider specific). See values.yaml for examples. |
 
 ## Installation
 

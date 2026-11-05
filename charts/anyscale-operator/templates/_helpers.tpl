@@ -272,3 +272,11 @@ Converts string passed in into a json pointer
 {{- define "anyscale-operator.jsonPointer" -}}
 {{- . | replace "~" "~0" | replace "/" "~1" -}}
 {{- end -}}
+
+{{/*
+"true" when a Traefik running its Ingress NGINX provider serves the Anyscale Ingresses:
+the bundled one, a class override naming its class, or an explicit opt-in for another class.
+*/}}
+{{- define "anyscale-operator.nginxCompatibleTraefik" -}}
+{{- if or .Values.traefik.enabled (and .Values.networking.ingress.classNameOverride (eq .Values.networking.ingress.classNameOverride .Values.traefik.ingressClass.name)) .Values.networking.ingress.nginxCompatibleTraefik -}}true{{- end -}}
+{{- end -}}

@@ -29,7 +29,10 @@ The conditional logic for enableCrossNamespaceResourceManagement is handled in t
     resources: ["leases"]
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
 {{- end }}
-{{- if or (.Capabilities.APIVersions.Has "kueue.x-k8s.io/v1beta1")}}
+{{- /* Kueue 0.20 dropped v1beta1: grant on any served version of the group, a future v1 included. */}}
+{{- $kueueServed := false }}
+{{- range .Capabilities.APIVersions }}{{- if hasPrefix "kueue.x-k8s.io/" . }}{{- $kueueServed = true }}{{- end }}{{- end }}
+{{- if $kueueServed }}
   - apiGroups: ["kueue.x-k8s.io"]
     resources: ["workloads"]
     verbs: ["get", "watch", "list", "create", "update", "patch", "delete"]
