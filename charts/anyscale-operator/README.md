@@ -222,6 +222,7 @@ dcgm-exporter is unauthenticated and serves every GPU on its node to anything th
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `ingress-nginx.enabled` | bool | `false` | Whether to install the NGINX Ingress Controller as a dependency |
+| `ingress-nginx.controller.image` | object | Anyscale build of controller `v1.15.15-anyscale.1` on `public.ecr.aws`, pinned by digest | Controller image with the fixes for CVE-2026-123007 and CVE-2026-123633. Override `registry`, `image`, `tag` and `digest` together to mirror it. |
 | `ingress-nginx.controller.ingressClass` | string | `"anyscale-nginx"` | Ingress class that this controller should watch |
 | `ingress-nginx.controller.service.type` | string | `"LoadBalancer"` | Service type for the ingress controller |
 | `ingress-nginx.controller.service.annotations` | object | `{}` | Service annotations (cloud provider specific). See values.yaml for examples. |

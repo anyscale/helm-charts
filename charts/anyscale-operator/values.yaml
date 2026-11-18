@@ -837,6 +837,16 @@ ingress-nginx:
   enabled: false
 
   controller:
+    # Controller v1.15.15 with the fixes for CVE-2026-123007 and CVE-2026-123633
+    # backported, built by Anyscale and published to a public registry. It
+    # reports nginx 1.27.1 in `--version`; identify it by digest.
+    image:
+      registry: public.ecr.aws/anyscale
+      image: ingress-nginx-controller
+      tag: "v1.15.15-anyscale.1"
+      # Multi-arch index digest. Must stay set: an unset digest falls back to the
+      # upstream chart's v1.15.1 digest.
+      digest: sha256:2795115b5f0708eb4ade4732cbad8996876daf36cd0deef1a9e3073bea28cc8e
     # Set the ingress class that this controller should watch
     ingressClass: anyscale-nginx
 
