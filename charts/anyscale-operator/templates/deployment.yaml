@@ -129,6 +129,24 @@ spec:
         {{- end }}
         - --workload-target-namespace={{ .Values.workloads.targetNamespace }}
         {{- end }}
+        {{- /* The old top-level spelling, never in a public release but used by internal installs;
+             ignoring it would turn GPU metrics off with no signal. */}}
+        {{- if .Values.gpu }}
+        {{- fail "gpu.dcgmExporter has moved to workloads.dcgmExporter: set workloads.dcgmExporter.namespace (and serviceName) and remove the gpu block" }}
+        {{- end }}
+        {{- /* A Service name without the namespace would be silently ignored, so it is an error;
+             both names are checked here so a bad one fails the render, not the operator. */}}
+        {{- if and .Values.workloads.dcgmExporter.serviceName (not .Values.workloads.dcgmExporter.namespace) }}
+        {{- fail "workloads.dcgmExporter.serviceName requires workloads.dcgmExporter.namespace: the namespace enables GPU metrics, and the Service name only says which Service in it to scrape" }}
+        {{- end }}
+        {{- if .Values.workloads.dcgmExporter.namespace }}
+        {{- include "anyscale-operator.validateNamespaceName" (dict "field" "workloads.dcgmExporter.namespace" "value" .Values.workloads.dcgmExporter.namespace) }}
+        - --dcgm-namespace={{ .Values.workloads.dcgmExporter.namespace }}
+        {{- if .Values.workloads.dcgmExporter.serviceName }}
+        {{- include "anyscale-operator.validateServiceName" (dict "field" "workloads.dcgmExporter.serviceName" "value" .Values.workloads.dcgmExporter.serviceName) }}
+        - --dcgm-service-name={{ .Values.workloads.dcgmExporter.serviceName }}
+        {{- end }}
+        {{- end }}
         - --system-logs-ingress-proxy-port=3100
         - --system-metrics-ingress-proxy-port=3101
         - --vector-enrichment-table-path=/tmp/config/vector/runtime_metadata.csv
