@@ -56,7 +56,7 @@ global:
       operator:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: kubernetes_manager
-          tag: ci-6045673368414ac48c8420e0df346523d8820483
+          tag: ci-195eb13c2c5989999ff99032be543f86c48eaa7f
       vector:
           registry: anyscaleoperator.azurecr.io/anyscale
           image: vector_sidecar
@@ -354,6 +354,21 @@ workloads:
   # the downward API does not expose. Required for certain topology-aware features in Ray.
   enableNodeReads: true
 
+  # DCGM metrics for GPU workloads. Anyscale does not install dcgm-exporter: run it
+  # yourself (the NVIDIA GPU Operator does) in Kubernetes mode, name its namespace here
+  # and ask Anyscale to enable the scrape for your cloud. See the README's "GPU Metrics"
+  # section for what the chart grants and what the exporter exposes.
+  dcgmExporter:
+    # string, namespace, default: ""
+    # Namespace of the dcgm-exporter Service and pods ("gpu-operator" by default with
+    # the GPU Operator). Empty disables GPU metrics. When set, workload pods may list
+    # EndpointSlices in this namespace so each GPU pod can find the exporter on its node.
+    namespace: ""
+    # string, serviceName, default: ""
+    # The exporter's Service name. Empty means "nvidia-dcgm-exporter", the GPU Operator's;
+    # the standalone dcgm-exporter chart names it after the release. Requires `namespace`.
+    serviceName: ""
+
   # array, managedNamespaces, default: []
   # A list of namespaces where the Anyscale Operator's namespace secrets will be copied to.
   # The operator will periodically copy all secrets from its own namespace to these namespaces.
@@ -385,9 +400,9 @@ workloads:
   # grant (not `createPerNamespaceRoleBindings`) and grants the operator cluster-wide
   # get/list/watch on Namespaces. If `managedNamespaces` is also set, the operator
   # refuses to start unless that list and the labelled namespaces are the same set
-  # (a migration check; empty the list once they agree). See the README's "Managed
-  # Namespaces" section for what the chart cannot render for namespaces it only
-  # learns about at runtime.
+  # (a migration check; empty the list once they agree). Per-namespace resources
+  # (workload ServiceAccount, node-reader and dcgm-exporter reader bindings) cover only
+  # the release namespace and `managedNamespaces`; see the README for the manual grants.
   discoverManagedNamespaces: false
 
   # string, managedNamespacesLabelSelector, default: "anyscale-managed=true"
@@ -660,7 +675,7 @@ operator:
     image:
       registry: us-docker.pkg.dev
       image: anyscale-artifacts/public/kubernetes_manager
-      tag: "ci-6045673368414ac48c8420e0df346523d8820483"
+      tag: "ci-195eb13c2c5989999ff99032be543f86c48eaa7f"
 
     resources:
       requests:

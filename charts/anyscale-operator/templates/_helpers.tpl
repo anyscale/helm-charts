@@ -23,6 +23,20 @@ Call with (dict "field" "<values key>" "value" <candidate>).
 {{- end -}}
 
 {{/*
+Fail when the value is not a valid Kubernetes Service name (RFC 1035 label: a namespace
+name that starts with a letter), the rule the control plane applies at registration.
+Call with (dict "field" "<values key>" "value" <candidate>).
+*/}}
+{{- define "anyscale-operator.validateServiceName" -}}
+{{- if not (kindIs "string" .value) -}}
+{{- fail (printf "%s: %v is not a string; quote the Service name" .field .value) -}}
+{{- end -}}
+{{- if not (regexMatch "^[a-z]([-a-z0-9]{0,61}[a-z0-9])?$" .value) -}}
+{{- fail (printf "%s: %q is not a valid Kubernetes Service name: 1-63 lowercase alphanumeric characters or '-', starting with a letter and ending with an alphanumeric character" .field .value) -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 The node label that is present only on accelerator nodes, used to keep CPU workloads
 off them. AWS, Azure and the fallback use the GPU-feature-discovery label set -- the
 same set the accelerator node selectors consume -- while GKE labels its accelerator
